@@ -173,7 +173,7 @@ $baseUrl = '/posts';
                     </div>
                 </div>
 
-                <!-- Finance Card -->
+                <!-- Gioi thieu-->
                 <div class=" col-md-8">
                      <div class=" card card-hover h-100 featured-card shadow-sm" style="background-image: url('<?=$baseUrl?>/dist/imgs/blog.png'); background-size: cover; background-position: center; color: white;">
                           <div class="card-body">
@@ -192,7 +192,7 @@ $baseUrl = '/posts';
         </div>
     </section>
 
-    <!-- Browse Topics Section -->
+    <!-- Chu de -->
     <section class="topics-section py-5">
         <div class="container">
             <h2 class="text-center mb-4">Chủ Đề</h2>
@@ -221,11 +221,11 @@ $baseUrl = '/posts';
             </ul>
             </div>
 
-            <!-- Posts Display (remains largely the same) -->
+            
             <!--
-                =========================
+    
                 Hiển thị danh sách bài viết (posts)
-                =========================
+                
                 - Duyệt qua kết quả truy vấn $result để hiển thị từng bài viết.
                 - Hiển thị tiêu đề, tóm tắt nội dung (lấy 100 ký tự đầu, loại bỏ thẻ HTML), tên tác giả, avatar, ngày đăng, số lượt like/dislike.
                 - Nếu có họ tên thì ưu tiên hiển thị, nếu không thì lấy username.
@@ -320,9 +320,9 @@ $baseUrl = '/posts';
             </div>
 
             <!--
-                =========================
+               
                 Phân trang (Pagination)
-                =========================
+               
                 - Hiển thị các nút chuyển trang nếu tổng số trang > 1
                 - Nút << và >> để chuyển về trang trước/sau
                 - Các nút số trang, trang hiện tại được bôi đậm
