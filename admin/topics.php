@@ -79,7 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_topic'])) {
 }
 
 // Lấy danh sách tất cả chủ đề để hiển thị
-$topics_query = "SELECT * FROM topics ORDER BY name ASC";
+// Sửa lại truy vấn để sắp xếp theo ID tăng dần (mới thêm sẽ ở cuối danh sách)
+$topics_query = "SELECT * FROM topics ORDER BY id ASC";
 $topics_result = mysqli_query($conn, $topics_query);
 
 // Đặt biến $baseUrl để cấu hình đường dẫn cơ sở cho các liên kết trong giao diện quản trị

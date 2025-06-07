@@ -93,9 +93,42 @@ $baseUrl = '/posts'; // Đặt biến $baseUrl để cấu hình đường dẫn
                 <li>
                     <a href="<?=$baseUrl?>/admin/users.php"><i class="bi bi-people"></i> Quản lý người dùng</a>
                 </li>
-                 <li>
+                <li>
                     <a href="<?=$baseUrl?>/admin/topics.php"><i class="bi bi-tags"></i> Quản lý chủ đề</a>
                 </li>
+            </ul>
+
+            <ul class="list-unstyled components" style="max-height: 350px; overflow-y: auto; overflow-x: hidden; white-space: normal;">
+                <!--
+                    =========================
+                    Danh sách chủ đề (sidebar)
+                    =========================
+                    - Sử dụng style max-height và overflow-y: auto để tạo thanh cuộn dọc nếu danh sách dài.
+                    - white-space: normal để không bị mất chữ, xuống dòng nếu tên chủ đề dài.
+                    - Hiển thị tất cả chủ đề theo thứ tự id tăng dần.
+                -->
+                <li>
+                    <a href="<?=$baseUrl?>/admin/index.php"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                </li>
+                <li>
+                    <a href="<?=$baseUrl?>/admin/posts.php"><i class="bi bi-journal-text"></i> Quản lý bài đăng</a>
+                </li>
+                <li>
+                    <a href="<?=$baseUrl?>/admin/users.php"><i class="bi bi-people"></i> Quản lý người dùng</a>
+                </li>
+                <li>
+                    <a href="<?=$baseUrl?>/admin/topics.php"><i class="bi bi-tags"></i> Quản lý chủ đề</a>
+                </li>
+                <?php
+                // Hiển thị tất cả chủ đề trong sidebar (theo id tăng dần)
+                $topics_sidebar_query = "SELECT * FROM topics ORDER BY id ASC";
+                $topics_sidebar_result = mysqli_query($conn, $topics_sidebar_query);
+                if ($topics_sidebar_result && mysqli_num_rows($topics_sidebar_result) > 0) {
+                    while ($topic = mysqli_fetch_assoc($topics_sidebar_result)) {
+                        echo '<li><a href="' . $baseUrl . '/admin/topics.php?edit=' . $topic['id'] . '"><i class="bi bi-tag"></i> ' . htmlspecialchars($topic['name']) . '</a></li>';
+                    }
+                }
+                ?>
             </ul>
 
              <ul class="list-unstyled components">
@@ -146,4 +179,4 @@ $baseUrl = '/posts'; // Đặt biến $baseUrl để cấu hình đường dẫn
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html> 
+</html>

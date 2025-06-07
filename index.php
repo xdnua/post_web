@@ -38,7 +38,8 @@ if (!empty($conditions)) {
 
 
 // Lấy danh sách chủ đề để hiển thị tab chủ đề
-$topics_query = "SELECT id, name FROM topics ORDER BY name ASC";
+// Sửa lại truy vấn để sắp xếp theo id tăng dần (theo thứ tự thêm vào)
+$topics_query = "SELECT id, name FROM topics ORDER BY id ASC";
 $topics_result = mysqli_query($conn, $topics_query);
 
 // Nếu có chọn chủ đề, lấy tên chủ đề để hiển thị
@@ -195,13 +196,13 @@ $baseUrl = '/posts';
     <!-- Chu de -->
     <section class="topics-section py-5">
         <div class="container">
-            <h2 class="text-center mb-4">Chủ Đề</h2>
+            <h2 class="text-center mb-4" id="topics-section">Chủ Đề</h2>
 
             <!-- Topic Tabs -->
             <div style="overflow-x: auto; white-space: nowrap; padding-bottom: 15px; -webkit-overflow-scrolling: touch;">
                 <ul class="nav nav-tabs justify-content-center border-0 mb-4" id="topicTabs" role="tablist" style="flex-wrap: nowrap;">
                  <li class="nav-item" role="presentation">
-                <button class="nav-link <?php echo ($topic_id === null) ? 'active' : ''; ?>" id="all-topics-tab" data-bs-toggle="tab" data-bs-target="#all-topics" type="button" role="tab" aria-controls="all-topics" aria-selected="<?php echo ($topic_id === null) ? 'true' : 'false'; ?>" onclick="window.location.href='index.php<?php echo !empty($search_term) ? '?search=' . htmlspecialchars($search_term) : ''; ?>'">Tất cả</button>
+                <button class="nav-link <?php echo ($topic_id === null) ? 'active' : ''; ?>" id="all-topics-tab" data-bs-toggle="tab" data-bs-target="#all-topics" type="button" role="tab" aria-controls="all-topics" aria-selected="<?php echo ($topic_id === null) ? 'true' : 'false'; ?>" onclick="window.location.href='index.php<?php echo !empty($search_term) ? '?search=' . htmlspecialchars($search_term) : ''; ?>#topics-section'">Tất cả</button>
                 </li>
                 <?php 
                  // Rewind the topics result set to iterate again for tabs
@@ -212,7 +213,7 @@ $baseUrl = '/posts';
                 <?php if ($topics_result && mysqli_num_rows($topics_result) > 0): ?>
                     <?php while ($topic = mysqli_fetch_assoc($topics_result)): ?>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link <?php echo ($topic_id == $topic['id']) ? 'active' : ''; ?>" id="topic-<?php echo $topic['id']; ?>-tab" data-bs-toggle="tab" data-bs-target="#topic-<?php echo $topic['id']; ?>" type="button" role="tab" aria-controls="topic-<?php echo $topic['id']; ?>" aria-selected="<?php echo ($topic_id == $topic['id']) ? 'true' : 'false'; ?>" onclick="window.location.href='index.php?topic_id=<?php echo $topic['id']; ?><?php echo !empty($search_term) ? '&search=' . htmlspecialchars($search_term) : ''; ?>'">
+                            <button class="nav-link <?php echo ($topic_id == $topic['id']) ? 'active' : ''; ?>" id="topic-<?php echo $topic['id']; ?>-tab" data-bs-toggle="tab" data-bs-target="#topic-<?php echo $topic['id']; ?>" type="button" role="tab" aria-controls="topic-<?php echo $topic['id']; ?>" aria-selected="<?php echo ($topic_id == $topic['id']) ? 'true' : 'false'; ?>" onclick="window.location.href='index.php?topic_id=<?php echo $topic['id']; ?><?php echo !empty($search_term) ? '&search=' . htmlspecialchars($search_term) : ''; ?>#topics-section'">
                                 <?php echo htmlspecialchars($topic['name']); ?>
                             </button>
                         </li>
