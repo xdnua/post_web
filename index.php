@@ -1,42 +1,47 @@
 <?php
-require_once 'config/database.php';
-require_once 'auth/auth.php';
+require_once 'config/database.php'; // Kết nối CSDL
+require_once 'auth/auth.php'; // Kiểm tra đăng nhập, xác thực người dùng
 
-// Get all posts with user information
-$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-$limit = 10; // Still keep pagination logic for potential future use or listing within topics
-$offset = ($page - 1) * $limit;
-$search_term = $_GET['search'] ?? '';
-$topic_id = isset($_GET['topic_id']) ? (int)$_GET['topic_id'] : null;
 
-$conditions = [];
-$param_values = [];
-$param_types = '';
+// Xử lý phân trang, tìm kiếm, lọc chủ đề
 
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1; // Lấy số trang hiện tại từ URL, mặc định là 1
+$limit = 10; // Số bài viết mỗi trang
+$offset = ($page - 1) * $limit; // Vị trí bắt đầu lấy dữ liệu
+$search_term = $_GET['search'] ?? ''; // Từ khóa tìm kiếm (nếu có)
+$topic_id = isset($_GET['topic_id']) ? (int)$_GET['topic_id'] : null; // Lọc theo chủ đề (nếu có)
+
+$conditions = []; // Mảng điều kiện truy vấn
+$param_values = []; // Mảng giá trị tham số truy vấn
+$param_types = ''; // Chuỗi kiểu dữ liệu tham số 
+
+// Nếu có từ khóa tìm kiếm, thêm điều kiện tìm kiếm vào truy vấn
 if (!empty($search_term)) {
-    $conditions[] = " (p.title LIKE ? OR p.content LIKE ?) ";
+    $conditions[] = " (p.title LIKE ? OR p.content LIKE ?) "; // Tìm trong tiêu đề hoặc nội dung
     $param_values[] = '%' . $search_term . '%';
     $param_values[] = '%' . $search_term . '%';
-    $param_types .= 'ss';
+    $param_types .= 'ss'; // 2 tham số kiểu string
 }
 
+// Nếu có lọc theo chủ đề, thêm điều kiện chủ đề vào truy vấn
 if ($topic_id !== null) {
     $conditions[] = " p.topic_id = ? ";
     $param_values[] = $topic_id;
-    $param_types .= 'i';
+    $param_types .= 'i'; // 1 tham số kiểu int
 }
 
+// Ghép các điều kiện thành chuỗi WHERE
 $where_clause = '';
 if (!empty($conditions)) {
     $where_clause = " WHERE " . implode(" AND ", $conditions);
 }
 
 
-// Fetch topics for the Topics section
+// Lấy danh sách chủ đề để hiển thị tab chủ đề
 $topics_query = "SELECT id, name FROM topics ORDER BY name ASC";
 $topics_result = mysqli_query($conn, $topics_query);
 
-// Get the name of the selected topic if topic_id is set
+// Nếu có chọn chủ đề, lấy tên chủ đề để hiển thị
 $selected_topic_name = '';
 if ($topic_id !== null) {
     $topic_name_query = "SELECT name FROM topics WHERE id = ? LIMIT 1";
@@ -51,12 +56,13 @@ if ($topic_id !== null) {
         }
         mysqli_stmt_close($stmt_topic);
      } else {
-        // Handle error if prepared statement fails
-        $error = 'Database error fetching topic name.';
+        // Nếu lỗi truy vấn
+        $error = 'Lỗi CSDL khi lấy tên chủ đề.';
      }
 }
 
-// Count total posts (with search and topic filter)
+
+// Đếm tổng số bài viết (phục vụ phân trang)
 $count_query_sql = "SELECT COUNT(*) as total FROM posts p" . $where_clause;
 $stmt_count = mysqli_prepare($conn, $count_query_sql);
 
@@ -66,36 +72,36 @@ if ($stmt_count) {
      }
     mysqli_stmt_execute($stmt_count);
     $count_result = mysqli_stmt_get_result($stmt_count);
-    $total_posts = mysqli_fetch_assoc($count_result)['total'];
-    $total_pages = ceil($total_posts / $limit);
+    $total_posts = mysqli_fetch_assoc($count_result)['total']; // Tổng số bài viết
+    $total_pages = ceil($total_posts / $limit); // Tổng số trang
     mysqli_stmt_close($stmt_count);
 } else {
-     // Handle error if prepared statement fails
-     $error = 'Database error counting posts.';
+     // Nếu lỗi truy vấn
+     $error = 'Lỗi CSDL khi đếm bài viết.';
      $total_posts = 0;
      $total_pages = 0;
 }
 
 
-// Get posts for current page (with search and topic filter)
+// Lấy danh sách bài viết cho trang hiện tại (có áp dụng tìm kiếm, lọc chủ đề, phân trang)
 $query_sql = "SELECT p.*, u.username, u.first_name, u.last_name, u.avatar,
         (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'like') as like_count,
         (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'dislike') as dislike_count
         FROM posts p
         JOIN users u ON p.user_id = u.id ";
 
-$query_sql .= $where_clause;
+$query_sql .= $where_clause; // Thêm điều kiện WHERE nếu có
 
-$query_sql .= " ORDER BY p.created_at DESC LIMIT ? OFFSET ?";
+$query_sql .= " ORDER BY p.created_at DESC LIMIT ? OFFSET ?"; // Sắp xếp mới nhất, phân trang
 
 $stmt = mysqli_prepare($conn, $query_sql);
 
 if ($stmt) {
-     // Create a new array and types string for the main query including limit and offset
-     $main_query_param_values = $param_values; // Start with existing filter values
+     // Tạo mảng tham số và kiểu dữ liệu cho truy vấn chính (bao gồm limit, offset)
+     $main_query_param_values = $param_values; // Bắt đầu với các giá trị filter
      $main_query_param_types = $param_types;
 
-     // Add types and values for limit and offset
+     // Thêm kiểu và giá trị cho limit, offset
      $main_query_param_types .= 'ii';
      $main_query_param_values[] = $limit;
      $main_query_param_values[] = $offset;
@@ -103,16 +109,15 @@ if ($stmt) {
     mysqli_stmt_bind_param($stmt, $main_query_param_types, ...$main_query_param_values);
 
     mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
+    $result = mysqli_stmt_get_result($stmt); // Kết quả danh sách bài viết
     mysqli_stmt_close($stmt);
 } else {
-     // Handle error if prepared statement fails
-    $error = 'Database error fetching posts.';
-    $result = false; // Indicate no results on error
+     // Nếu lỗi truy vấn
+    $error = 'Lỗi CSDL khi lấy danh sách bài viết.';
+    $result = false; // Không có kết quả
 }
 
-
-$baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
+$baseUrl = '/posts'; 
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -123,6 +128,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
     <link rel="stylesheet" href="<?=$baseUrl?>/global.css">
+    
 </head>
 <body style="padding-top: 60px;">
 <?php include 'navbar.php'; ?>
@@ -152,33 +158,37 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
             </div>
 
             <!-- Featured Cards Row -->
-            <div class="row g-4 mx-5">
+           <div class="row g-4 mx-5">
                 <!-- Web Design Card -->
-                <div class="col-md-4">
-                    <div class="card h-100 featured-card shadow-sm" style="background-image: url('<?=$baseUrl?>/dist/imgs/blog2.png'); background-size: cover; background-position: center; color: white;">
-                        <div class="card-body d-flex flex-column">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="card-title mb-0">Xin Chào</h5>
+                <div class="  col-md-4">
+                    <div class="card card-hover h-100 featured-card shadow-sm" style="background-image: url('<?=$baseUrl?>/dist/imgs/blog2.png'); background-size: cover; background-position: center; color: white;">
+                        <div class="card-body">
+                            <div class=" card-body d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="card-title mb-0">Xin Chào</h5>
+                                </div>
+                                <p class="card-text text-light">Chào mừng bạn đến với Kiến thức 4.0! Nơi chia sẻ kiến thức và kinh nghiệm về kiểm thử phần mềm và nhiều chủ đề thú vị khác.</p>
                             </div>
-                            <p class="card-text text-light">Chào mừng bạn đến với Blog Chia Sẻ! Nơi chia sẻ kiến thức và kinh nghiệm về lập trình, thiết kế web và nhiều chủ đề thú vị khác.</p>
-                            
-                        </div>
+                        </div>    
                     </div>
                 </div>
 
                 <!-- Finance Card -->
-                <div class="col-md-8">
-                     <div class="card h-100 featured-card shadow-sm" style="background-image: url('<?=$baseUrl?>/dist/imgs/blog.png'); background-size: cover; background-position: center; color: white;">
-                         <div class="card-body d-flex flex-column">
+                <div class=" col-md-8">
+                     <div class=" card card-hover h-100 featured-card shadow-sm" style="background-image: url('<?=$baseUrl?>/dist/imgs/blog.png'); background-size: cover; background-position: center; color: white;">
+                          <div class="card-body">
+                             <div class="  card-body d-flex flex-column">
                              <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h5 class="card-title mb-0">Giới Thiệu</h5>
-                            </div>
-                            <p class="card-text text-light" style="height: 200px;">Blog Chia Sẻ là nền tảng chia sẻ kiến thức trực tuyến, nơi bạn có thể tìm thấy các bài viết chất lượng về lập trình, thiết kế web, marketing và nhiều lĩnh vực khác. Chúng tôi cung cấp môi trường học tập và chia sẻ kiến thức cho cộng đồng.</p>
+                             </div>
+                             <p class="card-text text-light" style="height: 200px;">Kiến thức 4.0 là nền tảng chia sẻ kiến thức trực tuyến, nơi bạn có thể tìm thấy các bài viết chất lượng về kiểm thử phần mềm và nhiều lĩnh vực khác. Chúng tôi cung cấp môi trường học tập và chia sẻ kiến thức cho cộng đồng.</p>
                             
-                          </div>
+                            </div>
+                        </div>
                       </div>
                  </div>
              </div>
+           </div>
         </div>
     </section>
 
@@ -212,17 +222,28 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
             </div>
 
             <!-- Posts Display (remains largely the same) -->
+            <!--
+                =========================
+                Hiển thị danh sách bài viết (posts)
+                =========================
+                - Duyệt qua kết quả truy vấn $result để hiển thị từng bài viết.
+                - Hiển thị tiêu đề, tóm tắt nội dung (lấy 100 ký tự đầu, loại bỏ thẻ HTML), tên tác giả, avatar, ngày đăng, số lượt like/dislike.
+                - Nếu có họ tên thì ưu tiên hiển thị, nếu không thì lấy username.
+                - Avatar lấy từ thư mục /dist/avatars, nếu không có thì dùng ảnh mặc định.
+                - Nếu không có bài viết nào phù hợp với bộ lọc/tìm kiếm thì hiển thị thông báo phù hợp.
+                - Nút "Đọc tiếp" dẫn đến trang chi tiết bài viết (post.php?id=...).
+            -->
             <div class="tab-content" id="topicTabsContent">
                 <div class="tab-pane fade show active" id="all-topics" role="tabpanel" aria-labelledby="all-topics-tab">
                     <div class="row">
                          <?php 
-                         // Rewind the main post result set to display posts after tabs are set up
+                         // Đảm bảo con trỏ kết quả ở đầu để duyệt lại
                          if ($result) {
                              mysqli_data_seek($result, 0);
                          }
                          ?>
                          <?php 
-                         // Display posts if there are results, regardless of search/topic filter
+                         // Nếu có kết quả bài viết thì hiển thị, kể cả khi có filter
                          if ($result && mysqli_num_rows($result) > 0): ?>
                              <?php while ($post = mysqli_fetch_assoc($result)): ?>
                                      <div class="col-md-4 mb-4">
@@ -230,6 +251,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                                              <div class="card-body">
                                                  <h5 class="card-title"><?php echo htmlspecialchars($post['title']); ?></h5>
                                                  <p class="card-text"><?php
+                                                     // Lấy tóm tắt nội dung: loại bỏ thẻ HTML, lấy 100 ký tự đầu
                                                      $summary = mb_substr(strip_tags($post['content']), 0, 100);
                                                      if (mb_strlen(strip_tags($post['content'])) > 100) $summary .= '...';
                                                      echo htmlspecialchars($summary);
@@ -237,6 +259,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                                                  <div class="d-flex justify-content-between align-items-center">
                                                      <small class="text-muted">
                                                          <?php
+                                                         // Xác định tên hiển thị của tác giả: ưu tiên họ tên, nếu không có thì lấy username
                                                          $authorDisplayName = htmlspecialchars($post['username']);
                                                          if (!empty($post['first_name']) && !empty($post['last_name'])) {
                                                              $authorDisplayName = htmlspecialchars($post['first_name']) . ' ' . htmlspecialchars($post['last_name']);
@@ -245,6 +268,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                                                          } else if (!empty($post['last_name'])) {
                                                               $authorDisplayName = htmlspecialchars($post['last_name']);
                                                          }
+                                                         // Lấy đường dẫn avatar, nếu không có thì dùng avatar mặc định
                                                          $authorAvatarPath = $baseUrl . '/dist/avatars/' . htmlspecialchars($post['avatar'] ?? 'default_avatar.png');
                                                          ?>
                                                          Bởi<img src="<?=$authorAvatarPath?>" alt="Avatar" class="rounded-circle me-1" style="width: 20px; height: 20px; object-fit: cover;">
@@ -266,7 +290,13 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                                      </div>
                                  <?php endwhile; ?>
                           <?php elseif (($result && mysqli_num_rows($result) == 0) || ($topics_result && mysqli_num_rows($topics_result) == 0 && empty($search_term) && $topic_id === null)): ?>
-                               <!-- Display message if no posts found based on filter or if no topics exist and no filter is applied -->
+                               <!--
+                                    Nếu không có bài viết nào phù hợp với filter/tìm kiếm hoặc không có chủ đề nào thì hiển thị thông báo phù hợp:
+                                    - Nếu có từ khóa tìm kiếm: thông báo không tìm thấy bài đăng cho từ khóa đó
+                                    - Nếu có lọc chủ đề: thông báo không tìm thấy bài đăng trong chủ đề đó
+                                    - Nếu không có chủ đề: thông báo không tìm thấy chủ đề
+                                    - Nếu không có bài đăng nào: thông báo chưa có bài đăng
+                                -->
                               <div class="col-12 text-center">
                                      <div class="alert alert-info text-center mt-3 mb-0 mx-auto gradient-bg text-light" style="max-width: 300px;">
                                          <i class="bi bi-emoji-frown" style="font-size:2rem;"></i><br>
@@ -277,7 +307,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                                                   echo "Không tìm thấy bài đăng nào trong chủ đề \"" . htmlspecialchars($selected_topic_name) . "\".";
                                              } else if ($topic_id !== null && empty($selected_topic_name)) {
                                                  echo "Không tìm thấy chủ đề.";
-                                             } else { // No search, no topic_id, and no posts at all
+                                             } else { // Không có tìm kiếm, không có chủ đề, không có bài đăng
                                                  echo "Chưa có bài đăng nào tại hiện tại!";
                                              }
                                          ?>
@@ -286,26 +316,35 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                           <?php endif; ?>
                     </div>
                 </div>
-                <!-- Additional tab panes would go here if filtering by topic client-side -->
+                <!-- Nếu muốn lọc chủ đề phía client thì thêm tab-pane ở đây -->
             </div>
 
-             <?php if ($total_pages > 1): ?>
-                    <nav aria-label="Page navigation">
-                      <ul class="pagination justify-content-center">
-                        <li class="page-item<?php if ($page <= 1) echo ' disabled'; ?>">
-                          <a class="page-link" href="?page=<?php echo $page-1; ?><?php echo !empty($search_term) ? '&search=' . htmlspecialchars($search_term) : ''; ?><?php echo ($topic_id !== null) ? '&topic_id=' . htmlspecialchars($topic_id) : ''; ?>" tabindex="-1">&laquo;</a>
-                        </li>
-                        <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                          <li class="page-item<?php if ($i == $page) echo ' active'; ?>">
-                            <a class="page-link" href="?page=<?php echo $i; ?><?php echo !empty($search_term) ? '&search=' . htmlspecialchars($search_term) : ''; ?><?php echo ($topic_id !== null) ? '&topic_id=' . htmlspecialchars($topic_id) : ''; ?>"><?php echo $i; ?></a>
-                          </li>
-                        <?php endfor; ?>
-                        <li class="page-item<?php if ($page >= $total_pages) echo ' disabled'; ?>">
-                          <a class="page-link" href="?page=<?php echo $page+1; ?><?php echo !empty($search_term) ? '&search=' . htmlspecialchars($search_term) : ''; ?><?php echo ($topic_id !== null) ? '&topic_id=' . htmlspecialchars($topic_id) : ''; ?>">&raquo;</a>
-                        </li>
-                      </ul>
-                    </nav>
-                    <?php endif; ?>
+            <!--
+                =========================
+                Phân trang (Pagination)
+                =========================
+                - Hiển thị các nút chuyển trang nếu tổng số trang > 1
+                - Nút << và >> để chuyển về trang trước/sau
+                - Các nút số trang, trang hiện tại được bôi đậm
+                - Giữ lại các tham số tìm kiếm, lọc chủ đề khi chuyển trang
+            -->
+            <?php if ($total_pages > 1): ?>
+                <nav aria-label="Page navigation">
+                  <ul class="pagination justify-content-center">
+                    <li class="page-item<?php if ($page <= 1) echo ' disabled'; ?>">
+                      <a class="page-link" href="?page=<?php echo $page-1; ?><?php echo !empty($search_term) ? '&search=' . htmlspecialchars($search_term) : ''; ?><?php echo ($topic_id !== null) ? '&topic_id=' . htmlspecialchars($topic_id) : ''; ?>" tabindex="-1">&laquo;</a>
+                    </li>
+                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                      <li class="page-item<?php if ($i == $page) echo ' active'; ?>">
+                        <a class="page-link" href="?page=<?php echo $i; ?><?php echo !empty($search_term) ? '&search=' . htmlspecialchars($search_term) : ''; ?><?php echo ($topic_id !== null) ? '&topic_id=' . htmlspecialchars($topic_id) : ''; ?>"><?php echo $i; ?></a>
+                      </li>
+                    <?php endfor; ?>
+                    <li class="page-item<?php if ($page >= $total_pages) echo ' disabled'; ?>">
+                      <a class="page-link" href="?page=<?php echo $page+1; ?><?php echo !empty($search_term) ? '&search=' . htmlspecialchars($search_term) : ''; ?><?php echo ($topic_id !== null) ? '&topic_id=' . htmlspecialchars($topic_id) : ''; ?>">&raquo;</a>
+                    </li>
+                  </ul>
+                </nav>
+            <?php endif; ?>
         </div>
     </section>
 
@@ -403,4 +442,4 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-<?php include 'footer.php'; ?> 
+<?php include 'footer.php'; ?>

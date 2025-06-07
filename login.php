@@ -1,21 +1,25 @@
 <?php
-require_once 'config/database.php';
-require_once 'auth/auth.php';
+require_once 'config/database.php'; // Kết nối tới cơ sở dữ liệu
+require_once 'auth/auth.php'; // Xác thực tài khoản
 
 $error = '';
 
+// Nếu người dùng bấm nút Đăng nhập (gửi form)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
     
+    // Kiểm tra xem đã nhập đủ tên đăng nhập và mật khẩu chưa
     if (empty($username) || empty($password)) {
-        $error = 'Please fill in all fields';
+        $error = 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu';
     } else {
+        // Gọi hàm login kiểm tra tài khoản, nếu đúng thì chuyển về trang chủ
         if (login($username, $password)) {
             header('Location: index.php');
             exit();
         } else {
-            $error = 'Invalid username or password';
+            // Sai tài khoản hoặc mật khẩu
+            $error = 'Tên đăng nhập hoặc mật khẩu không đúng';
         }
     }
 }
@@ -70,4 +74,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-<?php include 'footer.php'; ?> 
+<?php include 'footer.php'; ?>

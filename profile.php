@@ -1,18 +1,19 @@
 <?php
+// Kiểm tra session, nếu chưa có thì khởi tạo
 if (session_status() === PHP_SESSION_NONE) session_start();
-require_once 'config/database.php';
-require_once 'auth/auth.php';
-$baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
+require_once 'config/database.php'; // Kết nối tới cơ sở dữ liệu
+require_once 'auth/auth.php'; // Nạp các hàm xác thực tài khoản
+$baseUrl = '/posts'; // Đường dẫn gốc của dự án (cần chỉnh lại nếu đổi tên thư mục)
 
-// Redirect if user is not logged in
+// Nếu chưa đăng nhập thì chuyển hướng về trang đăng nhập
 if (!isLoggedIn()) {
     header('Location: ' . $baseUrl . '/login.php');
     exit;
 }
 
-$user_id = $_SESSION['user_id'];
+$user_id = $_SESSION['user_id']; // Lấy id người dùng hiện tại từ session
 
-// Fetch user data
+// Lấy thông tin user từ database (dùng prepared statement để tránh SQL injection)
 $sql = "SELECT username, first_name, last_name, avatar FROM users WHERE id = ?";
 $stmt = mysqli_prepare($conn, $sql);
 mysqli_stmt_bind_param($stmt, 'i', $user_id);
@@ -21,114 +22,84 @@ $result = mysqli_stmt_get_result($stmt);
 $user = mysqli_fetch_assoc($result);
 mysqli_stmt_close($stmt);
 
-// Handle form submission
+// Xử lý khi người dùng gửi form cập nhật thông tin
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $first_name = trim($_POST['first_name']);
-    $last_name = trim($_POST['last_name']);
-    $avatar = $user['avatar']; // Keep current avatar by default
+    $first_name = trim($_POST['first_name']); // Lấy tên mới từ form
+    $last_name = trim($_POST['last_name']);   // Lấy họ mới từ form
+    $avatar = $user['avatar']; // Mặc định giữ nguyên avatar cũ
 
-    // Handle avatar upload
-    error_log("Avatar upload attempt.");
+    // Xử lý upload ảnh đại diện nếu có chọn file
     if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] == 0) {
-        error_log("File received. Error code: " . $_FILES['avatar']['error']);
-        error_log("File details: name=" . $_FILES['avatar']['name'] . ", type=" . $_FILES['avatar']['type'] . ", size=" . $_FILES['avatar']['size'] . ", tmp_name=" . $_FILES['avatar']['tmp_name']);
-
+        // Kiểm tra định dạng file hợp lệ
         $allowed_types = ['jpg' => 'image/jpg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif', 'png' => 'image/png'];
         $file_name = $_FILES['avatar']['name'];
         $file_type = $_FILES['avatar']['type'];
         $file_size = $_FILES['avatar']['size'];
         $temp_path = $_FILES['avatar']['tmp_name'];
 
-        // Verify file extension
         $ext = pathinfo($file_name, PATHINFO_EXTENSION);
         if (!array_key_exists($ext, $allowed_types)) {
             $_SESSION['error_message'] = 'Lỗi: Vui lòng chọn định dạng file ảnh hợp lệ (JPG, JPEG, GIF, PNG).';
-            error_log("File extension error: " . $ext);
         }
-
-        // Verify file size - max 5MB
+        // Kiểm tra kích thước file (tối đa 5MB)
         $maxsize = 5 * 1024 * 1024;
         if ($file_size > $maxsize) {
             $_SESSION['error_message'] = 'Lỗi: Kích thước file quá lớn, tối đa 5MB.';
-            error_log("File size error: " . $file_size);
         }
-
-        // Verify MIME type
+        // Kiểm tra mime type
         if (!in_array($file_type, $allowed_types)) {
             $_SESSION['error_message'] = 'Lỗi: Định dạng file không hợp lệ.';
-            error_log("File MIME type error: " . $file_type);
         }
-
-        // Process upload if no errors
+        // Nếu không có lỗi thì tiến hành upload
         if (!isset($_SESSION['error_message'])) {
-            $new_file_name = uniqid() . '.' . $ext; // Generate a unique filename
+            $new_file_name = uniqid() . '.' . $ext; // Tạo tên file mới duy nhất
             $upload_path = __DIR__ . '/dist/avatars/' . $new_file_name;
-
-            error_log("New file name: " . $new_file_name);
-            error_log("Upload path: " . $upload_path);
-
             if (!is_dir(__DIR__ . '/dist/avatars/')) {
-                 mkdir(__DIR__ . '/dist/avatars/', 0777, true);
-                 error_log("Avatars directory created.");
+                 mkdir(__DIR__ . '/dist/avatars/', 0777, true); // Tạo thư mục nếu chưa có
             }
-
             if (move_uploaded_file($temp_path, $upload_path)) {
-                 error_log("File moved successfully.");
-                 // Delete old avatar if it exists and is not the default
+                 // Nếu upload thành công, xóa avatar cũ nếu không phải mặc định
                  if (!empty($user['avatar']) && $user['avatar'] != 'default_avatar.png') {
                     $old_avatar_path = __DIR__ . '/dist/avatars/' . $user['avatar'];
-                    error_log("Attempting to delete old avatar: " . $old_avatar_path);
                     if (file_exists($old_avatar_path)) {
-                        unlink(str_replace('\\', '/', $old_avatar_path)); // Use forward slashes for path
-                        error_log("Old avatar deleted.");
+                        unlink(str_replace('\\', '/', $old_avatar_path));
                     }
                  }
                 $avatar = $new_file_name;
-                $_SESSION['success_message'] = 'Cập nhật ảnh đại diện thành công!'; // Avatar update success is part of main success
+                $_SESSION['success_message'] = 'Cập nhật ảnh đại diện thành công!';
             } else {
                 $_SESSION['error_message'] = 'Lỗi khi tải lên ảnh đại diện.';
-                error_log("Failed to move uploaded file.");
             }
         }
     } else if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] != 0) {
-         error_log("File upload error. Error code: " . $_FILES['avatar']['error']);
-         // Only set error message for upload errors other than UPLOAD_ERR_NO_FILE (code 4)
+         // Nếu upload lỗi (trừ trường hợp không chọn file)
          if ($_FILES['avatar']['error'] !== UPLOAD_ERR_NO_FILE) {
               $_SESSION['error_message'] = 'Lỗi tải file: Mã lỗi ' . $_FILES['avatar']['error'];
          }
-    } else {
-        error_log("No avatar file uploaded.");
     }
 
-    // Update user data in database if no errors
+    // Nếu không có lỗi thì cập nhật thông tin user vào database
     if (empty($_SESSION['error_message'])) {
-        error_log("No errors, attempting database update.");
-        error_log("Avatar value for update: " . $avatar);
         $update_sql = "UPDATE users SET first_name = ?, last_name = ?, avatar = ? WHERE id = ?";
         $update_stmt = mysqli_prepare($conn, $update_sql);
-        
         if ($update_stmt) {
             mysqli_stmt_bind_param($update_stmt, 'sssi', $first_name, $last_name, $avatar, $user_id);
-
             if (mysqli_stmt_execute($update_stmt)) {
-                 error_log("Database update successful.");
-                 // Success - Redirect using PRG pattern
-                $_SESSION['success_message'] = $_SESSION['success_message'] ?? 'Cập nhật thông tin tài khoản thành công!'; // Keep avatar success message if set
+                // Thành công: chuyển hướng lại trang profile (theo nguyên tắc POST/Redirect/GET)
+                $_SESSION['success_message'] = $_SESSION['success_message'] ?? 'Cập nhật thông tin tài khoản thành công!';
                 header('Location: ' . $baseUrl . '/profile.php');
                 exit();
             } else {
-                $_SESSION['error_message'] = 'Lỗi khi cập nhật thông tin tài khoản.'; // Overwrite or set error
-                error_log("Database update failed: " . mysqli_error($conn));
+                $_SESSION['error_message'] = 'Lỗi khi cập nhật thông tin tài khoản.';
             }
             mysqli_stmt_close($update_stmt);
         } else {
             $_SESSION['error_message'] = 'Lỗi chuẩn bị câu lệnh cập nhật cơ sở dữ liệu.';
-            error_log("Database update prepared statement failed: " . mysqli_error($conn));
         }
     }
 }
 
-// Check for and display messages from session
+// Lấy thông báo lỗi/thành công từ session (nếu có), sau đó xóa khỏi session để tránh lặp lại
 $error = $_SESSION['error_message'] ?? '';
 $success = $_SESSION['success_message'] ?? '';
 unset($_SESSION['error_message']);
@@ -249,4 +220,4 @@ unset($_SESSION['success_message']);
     });
 </script>
 </body>
-</html> 
+</html>

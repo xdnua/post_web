@@ -314,3 +314,39 @@ body {
 .admin-page body {
     padding-top: 0px !important;
 }
+
+.custom-hover-card {
+    transition: transform 0.25s cubic-bezier(.4,2,.6,1), box-shadow 0.25s;
+    box-shadow: 0 2px 16px 0 rgba(0,0,0,0.07);
+}
+.custom-hover-card:hover {
+    transform: translateY(-10px) scale(1.03);
+    box-shadow: 0 8px 32px 0 rgba(0,0,0,0.15);
+    z-index: 2;
+}
+.card-bg-effect {
+    position: absolute;
+    bottom: -30px;
+    right: -30px;
+    opacity: 0.07;
+    font-size: 7rem;
+    pointer-events: none;
+    z-index: 1;
+    transition: opacity 0.3s;
+}
+.custom-hover-card:hover .card-bg-effect {
+    opacity: 0.15;
+    filter: blur(1px) brightness(1.2);
+}
+.card-bg-effect i {
+    color: #0d6efd;
+}
+
+.card-hover {
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+}
+.card-hover:hover {
+  transform: translateY(-10px); /* đẩy lên trên 10px */
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.2); /* bóng đổ đậm hơn */
+}

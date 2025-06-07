@@ -3,7 +3,7 @@
         <div class="row">
             <!-- Cột trái: Thông tin web -->
             <div class="col-md-4">
-                <h3 class="text-light">Kiến thức 4.0</h3> <!-- Sử dụng text-warning để giả lập màu cam -->
+                <h3 class="text-light"><i class="bi-back"></i> Kiến thức 4.0</h3> <!-- Sử dụng text-warning để giả lập màu cam -->
                 <p>Nơi bạn có thể chia sẻ kiến thức và kinh nghiệm của mình</p>
             </div>
 
@@ -11,7 +11,7 @@
             <div class="col-md-4">
                 <h5>Bạn cần hỗ trợ</h5>
                 <p class="card-text"><strong>Điện thoại:</strong> 0876 176 706</p>
-                <p class="card-text"><strong>Email:</strong> anhhongcchemgio@gmail.com</p>
+                <p class="card-text"><strong>Email:</strong> anhhongchemgio@gmail.com</p>
                 <p class="card-text"><strong>Địa chỉ:</strong> Phù Yên, Phúc Lâm, Mỹ Đức, Hà Nội</p>
                 <div>
                     <a href="https://www.facebook.com/anh.hong.594371" class="me-2 text-primary"><i class="bi bi-facebook" style="font-size: 1.5rem;"></i></a>
@@ -43,7 +43,7 @@
         <hr class="bg-light mt-4 mb-3">
         <div class="row">
             <div class="col text-center">
-                <p class="text-white mb-0">&copy; <?php echo date('Y'); ?> Bản quyền thuộc về Blog Chia Sẻ.</p>
+                <p class="text-white mb-0">&copy; <?php echo date('Y'); ?> Bản quyền thuộc về Kiến thức 4.0.</p>
             </div>
         </div>
     </div>

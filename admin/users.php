@@ -1,69 +1,71 @@
 <?php
-require_once '../config/database.php';
-require_once '../auth/auth.php';
+require_once '../config/database.php'; // Kết nối tới cơ sở dữ liệu
+require_once '../auth/auth.php'; // Kết nối xác thực người dùng
 
-// Require admin access
+// Yêu cầu quyền quản trị
 requireAdmin();
 
+// Khai báo biến để hiện thông tin lỗi và thành công
 $error = '';
 $success = '';
 
-// Handle user deletion
+// Xử lý xóa người dùng
 if (isset($_POST['delete_user'])) {
     $user_id = (int)$_POST['delete_user'];
-    if ($user_id !== $_SESSION['user_id']) { // Prevent self-deletion
+    if ($user_id !== $_SESSION['user_id']) { // Không cho phép tự xóa tài khoản của chính mình
         $query = "DELETE FROM users WHERE id = $user_id";
         if (mysqli_query($conn, $query)) {
-            $success = 'User deleted successfully';
+            $success = 'Xóa người dùng thành công';
         } else {
-            $error = 'Failed to delete user';
+            $error = 'Xóa người dùng thất bại';
         }
     } else {
-        $error = 'Cannot delete your own account';
+        $error = 'Không thể xóa tài khoản của chính bạn';
     }
 }
 
-// Handle user role update
+// Xử lý cập nhật vai trò người dùng
 if (isset($_POST['update_role'])) {
     $user_id = (int)$_POST['user_id'];
     $new_role = $_POST['role'];
     
-    if ($user_id !== $_SESSION['user_id']) { // Prevent self-role change
+    if ($user_id !== $_SESSION['user_id']) { // Không cho phép tự đổi vai trò của chính mình
         $query = "UPDATE users SET role = '$new_role' WHERE id = $user_id";
         if (mysqli_query($conn, $query)) {
-            $success = 'User role updated successfully';
+            $success = 'Cập nhật vai trò người dùng thành công';
         } else {
-            $error = 'Failed to update user role';
+            $error = 'Cập nhật vai trò người dùng thất bại';
         }
     } else {
-        $error = 'Cannot change your own role';
+        $error = 'Không thể thay đổi vai trò của chính bạn';
     }
 }
 
-// Pagination and Search setup
+// Xử lý phân trang và tìm kiếm
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
 $search_term = $_GET['search'] ?? '';
 $search_condition = '';
 
+// Nếu có từ khóa tìm kiếm thì thêm điều kiện vào truy vấn
 if (!empty($search_term)) {
     $escaped_search_term = mysqli_real_escape_string($conn, $search_term);
     $search_condition = " WHERE username LIKE '%$escaped_search_term%' OR email LIKE '%$escaped_search_term%'";
 }
 
-// Count total users (with search)
+// Đếm tổng số người dùng (có áp dụng tìm kiếm nếu có)
 $count_query = "SELECT COUNT(*) as total FROM users" . $search_condition;
 $count_result = mysqli_query($conn, $count_query);
 $total_users = mysqli_fetch_assoc($count_result)['total'];
 $total_pages = ceil($total_users / $limit);
 
-// Get users for current page (with search)
+// Lấy danh sách người dùng cho trang hiện tại (có áp dụng tìm kiếm nếu có)
 $query = "SELECT id, username, email, role, created_at, first_name, last_name, avatar FROM users" . $search_condition . " ORDER BY created_at DESC LIMIT $limit OFFSET $offset";
 $result = mysqli_query($conn, $query);
 
-$baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
-
+// Đặt biến $baseUrl để cấu hình đường dẫn cơ sở cho các liên kết trong giao diện quản trị
+$baseUrl = '/posts';
 ?>
 
 <!DOCTYPE html>
@@ -124,7 +126,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
 </head>
 <body class="admin-page">
     <div class="wrapper">
-        <!-- Sidebar -->
+        <!-- Sidebar - Thanh điều hướng bên trái -->
         <nav id="sidebar">
             <div class="sidebar-header">
                 <h3><i class="bi bi-gear"></i> Admin Panel</h3>
@@ -155,7 +157,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
             </ul>
         </nav>
 
-        <!-- Page Content -->
+        <!-- Page Content - Nội dung trang -->
         <div id="content">
             <?php if ($error): ?>
                 <div class="alert alert-danger"><?php echo $error; ?></div>
@@ -195,11 +197,13 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                             </thead>
                             <tbody>
                                 <?php if (mysqli_num_rows($result) > 0): ?>
+                                    <!-- Lặp qua từng người dùng để hiển thị ra bảng -->
                                     <?php while ($user = mysqli_fetch_assoc($result)): ?>
                                         <tr>
                                             <td><?php echo $user['id']; ?></td>
                                             <td>
                                                 <?php
+                                                // Xác định tên hiển thị ưu tiên: họ tên đầy đủ > họ > tên > username
                                                 $userDisplayName = htmlspecialchars($user['username']);
                                                 if (!empty($user['first_name']) && !empty($user['last_name'])) {
                                                     $userDisplayName = htmlspecialchars($user['first_name']) . ' ' . htmlspecialchars($user['last_name']);
@@ -208,6 +212,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                                                 } else if (!empty($user['last_name'])) {
                                                      $userDisplayName = htmlspecialchars($user['last_name']);
                                                 }
+                                                // Đường dẫn avatar, nếu không có thì dùng avatar mặc định
                                                 $userAvatarPath = $baseUrl . '/dist/avatars/' . htmlspecialchars($user['avatar'] ?? 'default_avatar.png');
                                                 ?>
                                                 <div class="d-flex align-items-center">
@@ -218,6 +223,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                                             <td><?php echo htmlspecialchars($user['email']); ?></td>
                                             <td>
                                                 <?php if ($user['id'] !== $_SESSION['user_id']): ?>
+                                                    <!-- Form đổi vai trò người dùng, tự động gửi khi chọn -->
                                                     <form method="POST" action="" class="d-inline">
                                                         <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
                                                         <select name="role" class="form-select form-select-sm" onchange="this.form.submit()">
@@ -227,12 +233,14 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                                                         <input type="hidden" name="update_role" value="1">
                                                     </form>
                                                 <?php else: ?>
+                                                    <!-- Hiển thị vai trò của chính mình, không cho phép đổi -->
                                                     <span class="badge bg-primary"><?php echo $user['role']; ?></span>
                                                 <?php endif; ?>
                                             </td>
                                             <td><?php echo date('M d, Y', strtotime($user['created_at'])); ?></td>
                                             <td>
                                                 <?php if ($user['id'] !== $_SESSION['user_id']): ?>
+                                                    <!-- Nút xóa người dùng, xác nhận trước khi xóa -->
                                                     <form method="POST" action="" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this user?');">
                                                         <input type="hidden" name="delete_user" value="<?php echo $user['id']; ?>">
                                                         <button type="submit" class="btn btn-danger btn-sm">
@@ -244,6 +252,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                                         </tr>
                                     <?php endwhile; ?>
                                 <?php else: ?>
+                                    <!-- Nếu không có người dùng nào thì hiển thị thông báo -->
                                     <tr>
                                         <td colspan="6" class="text-center">
                                             <div class="alert alert-info text-center mt-3 mb-0 mx-auto gradient-bg text-light" style="max-width: 300px;">

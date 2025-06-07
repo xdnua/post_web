@@ -1,13 +1,13 @@
 <?php
-require_once 'config/database.php';
-require_once 'auth/auth.php';
-requireLogin();
+require_once 'config/database.php'; // Kết nối tới cơ sở dữ liệu
+require_once 'auth/auth.php'; //Xác thực tài khoản
+requireLogin(); // Bắt buộc phải đăng nhập mới xem được trang này
 
-$baseUrl = '/posts'; // Define baseUrl
+$baseUrl = '/posts'; 
 
-$user_id = $_SESSION['user_id'];
+$user_id = $_SESSION['user_id']; // Lấy id người dùng đang đăng nhập
 
-// Fetch logged-in user details for display
+// Lấy thông tin người dùng để hiển thị (tên, họ, avatar)
 $userSql = "SELECT username, first_name, last_name, avatar FROM users WHERE id = ? LIMIT 1";
 $userStmt = mysqli_prepare($conn, $userSql);
 $loggedInUser = null;
@@ -19,6 +19,7 @@ if ($userStmt) {
     mysqli_stmt_close($userStmt);
 }
 
+// Xác định tên hiển thị ưu tiên: họ tên đầy đủ > họ > tên > username
 $userDisplayName = htmlspecialchars($loggedInUser['username'] ?? '');
 if ($loggedInUser && !empty($loggedInUser['first_name']) && !empty($loggedInUser['last_name'])) {
      $userDisplayName = htmlspecialchars($loggedInUser['first_name']) . ' ' . htmlspecialchars($loggedInUser['last_name']);
@@ -33,35 +34,36 @@ if ($loggedInUser) {
     $userAvatarPath = $baseUrl . '/dist/avatars/' . htmlspecialchars($loggedInUser['avatar'] ?? 'default_avatar.png');
 }
 
-$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-$limit = 10;
-$offset = ($page - 1) * $limit;
+// Xử lý phân trang và tìm kiếm bài viết của chính mình
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1; // Trang hiện tại, mặc định là 1
+$limit = 10; // Số bài trên mỗi trang
+$offset = ($page - 1) * $limit; // Vị trí bắt đầu lấy dữ liệu
 $search_term = $_GET['search'] ?? '';
-$search_condition = " WHERE user_id = $user_id"; // Always filter by user_id
+$search_condition = " WHERE user_id = $user_id"; // Luôn chỉ lấy bài của user đang đăng nhập
 
+// Nếu có nhập từ khóa tìm kiếm thì thêm điều kiện tìm kiếm vào câu truy vấn
 if (!empty($search_term)) {
     $escaped_search_term = mysqli_real_escape_string($conn, $search_term);
-    // Add search filter to existing user_id condition
     $search_condition .= " AND (title LIKE '%$escaped_search_term%' OR content LIKE '%$escaped_search_term%')";
 }
 
-// Đếm tổng số bài của user (có tính search)
+// Đếm tổng số bài viết của user (có tính cả tìm kiếm)
 $count_query = "SELECT COUNT(*) as total FROM posts" . $search_condition;
 $count_result = mysqli_query($conn, $count_query);
 $total_posts = mysqli_fetch_assoc($count_result)['total'];
-$total_pages = ceil($total_posts / $limit);
+$total_pages = ceil($total_posts / $limit); // Tổng số trang
 
-// Lấy bài viết phân trang (có tính search)
+// Lấy danh sách bài viết (có phân trang và tìm kiếm)
 $query = "SELECT p.*, 
           (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'like') as like_count,
           (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'dislike') as dislike_count
           FROM posts p ";
 
-$query .= $search_condition; // Apply the combined condition
+$query .= $search_condition; // Thêm điều kiện lọc user và tìm kiếm
 
-$query .= " ORDER BY created_at DESC LIMIT $limit OFFSET $offset";
+$query .= " ORDER BY created_at DESC LIMIT $limit OFFSET $offset"; // Sắp xếp mới nhất, phân trang
 
-$result = mysqli_query($conn, $query);
+$result = mysqli_query($conn, $query); // Thực thi truy vấn lấy bài viết
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -98,7 +100,7 @@ $result = mysqli_query($conn, $query);
                             ?></p>
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                  <small class="text-muted d-flex align-items-center">
-                                     <?php if ($loggedInUser): // Check if user data was fetched ?>
+                                     <?php if ($loggedInUser): // Kiểm tra đã lấy được thông tin người dùng chưa ?>
                                          <img src="<?=$userAvatarPath?>" alt="Avatar" class="rounded-circle me-1" style="width: 20px; height: 20px; object-fit: cover;">
                                      <?php endif; ?>
                                      Bởi <?=$userDisplayName?>
@@ -183,4 +185,4 @@ $result = mysqli_query($conn, $query);
     ?>
 </body>
 </html>
-<?php include 'footer.php'; ?> 
+<?php include 'footer.php'; ?>

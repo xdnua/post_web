@@ -1,4 +1,4 @@
-<?php $baseUrl = '/posts'; // Change this to your project's directory name ?>
+<?php $baseUrl = '/posts'; ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -10,16 +10,17 @@
     <link rel="stylesheet" href="<?=$baseUrl?>/global.css">
 </head>
 <body>
-<?php include 'navbar.php'; ?>
+<?php include 'navbar.php'; // Hiển thị thanh điều hướng ?>
 
 <div class="container mt-5 text-center">
     <h1>500</h1>
     <h2>Lỗi máy chủ nội bộ</h2>
     <p>Đã xảy ra lỗi trên máy chủ. Vui lòng thử lại sau.</p>
+    <!-- Nút quay về trang chủ -->
     <a href="<?=$baseUrl?>/index.php" class="btn btn-primary">Quay về trang chủ</a>
 </div>
 
-<?php include 'footer.php'; ?>
+<?php include 'footer.php'; // Hiển thị chân trang ?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html> 
+</html>

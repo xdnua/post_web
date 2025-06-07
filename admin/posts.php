@@ -1,23 +1,27 @@
 <?php
-require_once '../config/database.php';
-require_once '../auth/auth.php';
 
-// Require admin access
+require_once '../config/database.php'; // Kết nối tới cơ sở dữ liệu
+require_once '../auth/auth.php'; // Kết nối xác thực người dùng
+
+// Yêu cầu quyền quản trị
 requireAdmin();
 
+// Khai báo biến để lưu thông tin lỗi và thành công
 $error = '';
 $success = '';
 
-// Handle post deletion
+// Xử lý xóa bài đăng
 if (isset($_POST['delete_post'])) {
     $post_id = (int)$_POST['delete_post'];
-    // Lấy nội dung bài viết để xóa ảnh
+    // Lấy nội dung bài đăng để xóa bài đăng liên quan
     $get_content = mysqli_query($conn, "SELECT content FROM posts WHERE id = $post_id");
     $row = mysqli_fetch_assoc($get_content);
     if ($row && !empty($row['content'])) {
+        // Tìm tất cả các đường dẫn ảnh trong nội dung bài viết
         if (preg_match_all('/src="(.*?)"/', $row['content'], $matches)) {
             foreach ($matches[1] as $img_url) {
                 $img_path = $_SERVER['DOCUMENT_ROOT'] . parse_url($img_url, PHP_URL_PATH);
+                // Nếu ảnh nằm trong thư mục uploads và tồn tại thì xóa
                 if (strpos($img_path, '/uploads/') !== false && file_exists($img_path)) {
                     @unlink($img_path);
                 }
@@ -32,25 +36,26 @@ if (isset($_POST['delete_post'])) {
     }
 }
 
-// Pagination and Search setup
+// Thiết lập phân trang và tìm kiếm
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
 $search_term = $_GET['search'] ?? '';
 $search_condition = '';
 
+// Nếu có từ khóa tìm kiếm thì thêm điều kiện vào truy vấn
 if (!empty($search_term)) {
     $escaped_search_term = mysqli_real_escape_string($conn, $search_term);
     $search_condition = " WHERE p.title LIKE '%$escaped_search_term%' OR p.content LIKE '%$escaped_search_term%'";
 }
 
-// Count total posts (with search)
+// Đếm tổng số bài đăng (có áp dụng tìm kiếm nếu có)
 $count_query = "SELECT COUNT(*) as total FROM posts p" . $search_condition;
 $count_result = mysqli_query($conn, $count_query);
 $total_posts = mysqli_fetch_assoc($count_result)['total'];
 $total_pages = ceil($total_posts / $limit);
 
-// Get posts for current page with user information (with search)
+// Lấy danh sách bài đăng cho trang hiện tại kèm thông tin người dùng (có áp dụng tìm kiếm nếu có)
 $query = "SELECT p.*, u.username, 
           (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'like') as like_count,
           (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'dislike') as dislike_count,
@@ -59,19 +64,19 @@ $query = "SELECT p.*, u.username,
           JOIN users u ON p.user_id = u.id ";
 
 if (!empty($search_condition)) {
-    // Replace WHERE with AND if joining conditions
+    // Nếu đã có WHERE thì thay bằng AND để nối điều kiện
      $query .= str_replace(' WHERE ', ' AND ', $search_condition);
 } else {
-     // Add original WHERE clause if no search condition
-     $query .= ' WHERE 1'; // Always start with a WHERE clause
+     // Nếu chưa có điều kiện thì thêm WHERE mặc định
+     $query .= ' WHERE 1'; // Luôn bắt đầu với WHERE để dễ nối điều kiện
 }
 
 $query .= " ORDER BY p.created_at DESC LIMIT $limit OFFSET $offset";
 
 $result = mysqli_query($conn, $query);
 
-$baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
-
+// Đặt biến $baseUrl để cấu hình đường dẫn cơ sở cho các liên kết trong giao diện quản trị
+$baseUrl = '/posts';
 ?>
 
 <!DOCTYPE html>
@@ -132,7 +137,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
 </head>
 <body class="admin-page">
     <div class="wrapper">
-        <!-- Sidebar -->
+        <!-- Thanh điều hướng bên trái (Sidebar) -->
         <nav id="sidebar">
             <div class="sidebar-header">
                 <h3><i class="bi bi-gear"></i> Admin Panel</h3>
@@ -163,8 +168,9 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
             </ul>
         </nav>
 
-        <!-- Page Content -->
+        <!-- Nội dung trang (Page Content) -->
         <div id="content">
+            <!--Hiển thị thông báo lỗi hoặc thành công -->
             <?php if ($error): ?>
                 <div class="alert alert-danger"><?php echo $error; ?></div>
             <?php endif; ?>
@@ -179,10 +185,12 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                 </div>
                 <div class="card-body">
 
+                    <!-- Form tìm kiếm bài viết -->
                     <form method="GET" action="" class="mb-4">
                         <div class="input-group">
                             <input type="text" class="form-control" name="search" placeholder="Tìm kiếm bài viết..." value="<?php echo htmlspecialchars($search_term); ?>">
                             <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Tìm kiếm</button>
+                            <!-- Nút hủy tìm kiếm, chỉ hiển thị nếu có từ khóa tìm kiếm --> 
                             <?php if (!empty($search_term)): ?>
                                 <a href="admin/posts.php" class="btn btn-secondary">Hủy tìm kiếm</a>
                             <?php endif; ?>
@@ -202,6 +210,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                                 </tr>
                             </thead>
                             <tbody>
+                                <!-- Hiển thị danh sách bài đăng -->
                                 <?php if (mysqli_num_rows($result) > 0): ?>
                                     <?php while ($post = mysqli_fetch_assoc($result)): ?>
                                         <tr>
@@ -222,9 +231,11 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                                             </td>
                                             <td>
                                                 <div class="btn-group">
+                                                    <!-- Nút xem bài viết -->
                                                     <a href="../post.php?id=<?php echo $post['id']; ?>" class="btn btn-primary btn-sm">
                                                         <i class="bi bi-eye"></i> Xem
                                                     </a>
+                                                    <!-- Nút xóa bài viết, xác nhận trước khi xóa -->
                                                     <form method="POST" action="" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bài này?');">
                                                         <input type="hidden" name="delete_post" value="<?php echo $post['id']; ?>">
                                                         <button type="submit" class="btn btn-danger btn-sm">
@@ -234,7 +245,9 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                                                 </div>
                                             </td>
                                         </tr>
+                                        <!-- Kết thúc vòng lặp hiển thị bài đăng -->
                                     <?php endwhile; ?>
+                                <!-- Nếu không có bài đăng nào -->
                                 <?php else: ?>
                                     <tr>
                                         <td colspan="6" class="text-center">
@@ -251,6 +264,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                 </div>
             </div>
 
+            <!-- Phân trang nếu có nhiều trang -->
             <?php if ($total_pages > 1): ?>
             <nav aria-label="Page navigation">
               <ul class="pagination justify-content-center mt-2">
@@ -273,4 +287,4 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html> 
+</html>

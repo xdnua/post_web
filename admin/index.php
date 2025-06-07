@@ -1,11 +1,12 @@
 <?php
-require_once '../config/database.php';
-require_once '../auth/auth.php';
+require_once '../config/database.php'; // Kết nối cơ sở dữ liệu
+require_once '../auth/auth.php'; // Kết nối xác thực người dùng
 
-// Require admin access
+// Yêu cầu quyền quản trị 
 requireAdmin();
 
-// Fetch some stats for the dashboard
+// Truy vấn để lấy tổng số bài đăng, người dùng và chủ đề để hiển thị lên giao diện quản trị
+
 $total_posts_query = "SELECT COUNT(*) as total FROM posts";
 $total_posts_result = mysqli_query($conn, $total_posts_query);
 $total_posts = mysqli_fetch_assoc($total_posts_result)['total'];
@@ -18,7 +19,8 @@ $total_topics_query = "SELECT COUNT(*) as total FROM topics";
 $total_topics_result = mysqli_query($conn, $total_topics_query);
 $total_topics = mysqli_fetch_assoc($total_topics_result)['total'];
 
-$baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
+$baseUrl = '/posts'; // Đặt biến $baseUrl để cấu hình đường dẫn cơ sở cho các liên kết trong giao diện quản trị
+
 ?>
 
 <!DOCTYPE html>
@@ -75,7 +77,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
 </head>
 <body class="admin-page">
     <div class="wrapper">
-        <!-- Sidebar -->
+        <!-- Sidebar - Thanh điều hướng bên trái -->
         <nav id="sidebar">
             <div class="sidebar-header">
                 <h3><i class="bi bi-gear"></i> Admin Panel</h3>
@@ -106,7 +108,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
             </ul>
         </nav>
 
-        <!-- Page Content -->
+        <!-- Page Content - Nội dung chính của trang admin -->
         <div id="content">
             <p>Chào mừng đến với khu vực quản trị.</p>
 
@@ -137,7 +139,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                 </div>
             </div>
 
-            <!-- Future dashboard content here -->
+            <!-- Future dashboard content here - Bổ sung các nội dung khác trong tương lai -->
 
         </div>
     </div>

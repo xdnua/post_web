@@ -1,22 +1,22 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
-require_once __DIR__ . '/auth/auth.php';
-require_once __DIR__ . '/config/database.php'; // Ensure database connection is available
-$baseUrl = '/posts'; // 
+if (session_status() === PHP_SESSION_NONE) session_start(); // Đảm bảo đã khởi động session
+require_once __DIR__ . '/auth/auth.php'; // Nhúng các hàm xác thực đăng nhập
+require_once __DIR__ . '/config/database.php'; // Kết nối tới cơ sở dữ liệu
+$baseUrl = '/posts'; // Đường dẫn gốc của dự án
 
-// Get the current page filename
+// Lấy tên file trang hiện tại để làm nổi bật menu tương ứng
 $currentPage = basename($_SERVER['PHP_SELF']);
 
 ?>
 <link rel="stylesheet" href="<?=$baseUrl?>/global.css">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark navbar-custom fixed-top">
     <div class="container">
-        <a class="navbar-brand" href="<?=$baseUrl?>/index.php" style="margin-right: 70px;">Blog Chia Sẻ</a>
+        <a class="navbar-brand" href="<?=$baseUrl?>/index.php" style="margin-right: 70px;"><i class="bi-back"></i><span> Kiến thức 4.0</span></a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-            <!-- Links bên trái -->
+            <!-- Menu bên trái -->
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
                     <a class="nav-link <?php if($currentPage == 'index.php') echo 'active-nav-link'; ?>" href="<?=$baseUrl?>/index.php"><i class="bi bi-house-door"></i> Trang chủ</a>
@@ -29,7 +29,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 </li>
                 <?php if (isLoggedIn()): ?>
                     <?php
-                    // Fetch user details for display
+                    // Lấy thông tin người dùng đang đăng nhập để hiển thị tên và avatar
                     $loggedInUserId = $_SESSION['user_id'];
                     $userSql = "SELECT username, first_name, last_name, avatar FROM users WHERE id = ? LIMIT 1";
                     $userStmt = mysqli_prepare($conn, $userSql);
@@ -42,6 +42,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                         mysqli_stmt_close($userStmt);
                     }
 
+                    // Ưu tiên hiển thị họ tên đầy đủ, nếu không có thì lấy tên hoặc username
                     $displayName = htmlspecialchars($loggedInUser['username'] ?? '');
                     if ($loggedInUser && !empty($loggedInUser['first_name']) && !empty($loggedInUser['last_name'])) {
                          $displayName = htmlspecialchars($loggedInUser['first_name']) . ' ' . htmlspecialchars($loggedInUser['last_name']);
@@ -53,7 +54,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
                     $avatarPath = $baseUrl . '/dist/avatars/' . htmlspecialchars($loggedInUser['avatar'] ?? 'default_avatar.png');
                     ?>
-                    <!-- Dropdown cho Bài đăng của tôi -->
+                    <!-- Dropdown menu cho phần Bài viết của tôi -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle <?php if($currentPage == 'my_posts.php' || $currentPage == 'create_post.php') echo 'active-nav-link'; ?>" href="#" id="navbarDropdownPosts" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-journal-text"></i> Bài viết
@@ -65,9 +66,9 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                     </li>
                 <?php endif; ?>
             </ul>
-            <!-- Links bên phải (Đăng nhập/Đăng ký hoặc Tên người dùng/Đăng xuất) -->
+            <!-- Menu bên phải: Đăng nhập/Đăng ký hoặc Tên người dùng/Đăng xuất -->
             <ul class="navbar-nav mb-2 mb-lg-0">
-                <?php if (isLoggedIn() && $loggedInUser): // Check if user data was fetched ?>
+                <?php if (isLoggedIn() && $loggedInUser): // Đã đăng nhập và lấy được thông tin user ?>
                      <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle d-flex align-items-center <?php if($currentPage == 'profile.php') echo 'active-nav-link'; ?>" href="#" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <img src="<?=$avatarPath?>" alt="Avatar" class="rounded-circle me-2" style="width: 30px; height: 30px; object-fit: cover;">
@@ -108,4 +109,4 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             </ul>
         </div>
     </div>
-</nav> 
+</nav>

@@ -1,7 +1,7 @@
 <?php
 require_once 'config/database.php';
 require_once 'auth/auth.php';
-$baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
+$baseUrl = '/posts'; 
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -20,10 +20,15 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
     <h2>Liên hệ với chúng tôi</h2>
     <p>Bạn có thể liên hệ với chúng tôi qua các thông tin dưới đây:</p>
     <ul>
-        <li><strong>Điện thoại:</strong> 0976 176 706</li>
-        <li><strong>Email:</strong> anhhongthuonggo@gmail.com</li>
-        <li><strong>Địa chỉ:</strong> Phú Yên, Phúc Lâm, Mỹ Đức, Hà Nội</li>
+        <li><strong>Điện thoại:</strong> 0876 176 706</li>
+        <li><strong>Email:</strong> anhhongchemgio@gmail.com</li>
+        <li><strong>Địa chỉ:</strong> Phù Yên, Phúc Lâm, Mỹ Đức, Hà Nội</li>
     </ul>
+        <div>
+            <a href="https://www.facebook.com/anh.hong.594371" class="me-2 text-primary"><i class="bi bi-facebook" style="font-size: 1.5rem;"></i></a>
+            <a href="https://www.tiktok.com/@aht_2811?lang=vi-VN" class="me-2 text-info"><i class="bi bi-tiktok" style="font-size: 1.5rem;"></i></a>
+            <a href="https://www.instagram.com/hongvu2811/" class="text-danger"><i class="bi bi-instagram" style="font-size: 1.5rem;"></i></a>
+        </div>
     <!-- Thêm form liên hệ hoặc thông tin chi tiết khác tại đây -->
 </div>
 

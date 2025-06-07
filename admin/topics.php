@@ -1,15 +1,16 @@
 <?php
-require_once '../config/database.php';
-require_once '../auth/auth.php';
+require_once '../config/database.php'; // Kết nối tới cơ sở dữ liệu
+require_once '../auth/auth.php'; // Kết nối xác thực người dùng
 
-// Require admin access
+// Yêu cầu quyền quản trị
 requireAdmin();
 
+// Khai báo biến để lưu thông tin lỗi và thành công
 $error = '';
 $success = '';
 $edit_topic = null;
 
-// Handle Add Topic
+// Xử lý thêm chủ đề mới
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_topic'])) {
     $topic_name = trim($_POST['topic_name']);
     if (!empty($topic_name)) {
@@ -23,14 +24,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_topic'])) {
     } else {
         $error = 'Tên chủ đề không được để trống.';
     }
+    // Sau khi xử lý xong thì chuyển hướng về trang chủ đề để tránh gửi lại form khi refresh
     header('Location: topics.php');
     exit();
 }
 
-// Handle Delete Topic
+// Xử lý xóa chủ đề
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_topic_id'])) {
     $topic_id = (int)$_POST['delete_topic_id'];
-    // Optionally, handle posts associated with this topic (e.g., set topic_id to NULL)
+    // Nếu xóa chủ đề, cập nhật các bài đăng liên quan về NULL
     $update_posts_query = "UPDATE posts SET topic_id = NULL WHERE topic_id = $topic_id";
     mysqli_query($conn, $update_posts_query);
     
@@ -40,11 +42,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_topic_id'])) {
     } else {
         $error = 'Lỗi: Không thể xóa chủ đề.';
     }
-     header('Location: topics.php');
+    // Chuyển hướng về trang chủ đề sau khi xóa
+    header('Location: topics.php');
     exit();
 }
 
-// Handle Edit Topic (Fetch data)
+// Xử lý lấy dữ liệu chủ đề để sửa
 if (isset($_GET['edit'])) {
     $edit_id = (int)$_GET['edit'];
     $query = "SELECT * FROM topics WHERE id = $edit_id LIMIT 1";
@@ -55,7 +58,7 @@ if (isset($_GET['edit'])) {
     }
 }
 
-// Handle Update Topic (Save changes)
+// Xử lý cập nhật chủ đề
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_topic'])) {
     $topic_id = (int)$_POST['topic_id'];
     $new_name = trim($_POST['new_topic_name']);
@@ -70,17 +73,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_topic'])) {
     } else {
         $error = 'Tên chủ đề không được để trống.';
     }
-     header('Location: topics.php');
+    // Chuyển hướng về trang chủ đề sau khi cập nhật
+    header('Location: topics.php');
     exit();
 }
 
-
-// Fetch all topics
+// Lấy danh sách tất cả chủ đề để hiển thị
 $topics_query = "SELECT * FROM topics ORDER BY name ASC";
 $topics_result = mysqli_query($conn, $topics_query);
 
-$baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
-
+// Đặt biến $baseUrl để cấu hình đường dẫn cơ sở cho các liên kết trong giao diện quản trị
+$baseUrl = '/posts';
 ?>
 
 <!DOCTYPE html>
@@ -137,11 +140,19 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
             flex: 1;
             padding: 20px;
         }
+        .card-hover {
+        transition: all 0.3s ease;
+        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+        }
+        .card-hover:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 12px 20px rgba(0, 0, 0, 0.2); 
+        }
     </style>
 </head>
 <body class="admin-page">
     <div class="wrapper">
-        <!-- Sidebar -->
+        <!-- Sidebar - Thanh điều hướng bên trái -->
         <nav id="sidebar">
             <div class="sidebar-header">
                 <h3><i class="bi bi-gear"></i> Admin Panel</h3>
@@ -172,20 +183,22 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
             </ul>
         </nav>
 
-        <!-- Page Content -->
+        <!-- Page Content - Nội dung trang -->
         <div id="content">
             <?php if ($error): ?>
+                <!-- Hiển thị thông báo lỗi nếu có -->
                 <div class="alert alert-danger"><?php echo $error; ?></div>
             <?php endif; ?>
             
             <?php if ($success): ?>
+                <!-- Hiển thị thông báo thành công nếu có -->
                 <div class="alert alert-success"><?php echo $success; ?></div>
             <?php endif; ?>
 
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="mb-0">Danh sách chủ đề</h3>
-                     <!-- Button trigger modal -->
+                     <!-- Nút mở modal thêm chủ đề mới -->
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTopicModal">
                       Thêm chủ đề mới
                     </button>
@@ -204,6 +217,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                             </thead>
                             <tbody>
                                 <?php if (mysqli_num_rows($topics_result) > 0): ?>
+                                    <!-- Lặp qua từng chủ đề để hiển thị ra bảng -->
                                     <?php while ($topic = mysqli_fetch_assoc($topics_result)): ?>
                                         <tr>
                                             <td><?php echo $topic['id']; ?></td>
@@ -211,9 +225,11 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                                             <td><?php echo date('d/m/Y H:i', strtotime($topic['created_at'])); ?></td>
                                             <td>
                                                 <div class="btn-group">
+                                                    <!-- Nút mở modal sửa chủ đề -->
                                                     <button class="btn btn-warning btn-sm edit-topic-btn" data-id="<?php echo $topic['id']; ?>" data-name="<?php echo htmlspecialchars($topic['name']); ?>" data-bs-toggle="modal" data-bs-target="#editTopicModal">
                                                         <i class="bi bi-pencil-square"></i> Sửa
                                                     </button>
+                                                    <!-- Nút xóa chủ đề, xác nhận trước khi xóa -->
                                                     <form method="POST" action="" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa chủ đề này? Các bài viết liên quan sẽ không còn chủ đề được chọn.');">
                                                         <input type="hidden" name="delete_topic_id" value="<?php echo $topic['id']; ?>">
                                                         <button type="submit" class="btn btn-danger btn-sm">
@@ -225,6 +241,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                                         </tr>
                                     <?php endwhile; ?>
                                 <?php else: ?>
+                                    <!-- Nếu không có chủ đề nào thì hiển thị thông báo -->
                                     <tr>
                                         <td colspan="4" class="text-center">
                                             <div class="alert alert-info text-center mt-3 mb-0 mx-auto gradient-bg text-light" style="max-width: 300px;">
@@ -240,7 +257,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                 </div>
             </div>
 
-            <!-- Add Topic Modal -->
+            <!-- Thêm chủ đề mới: Hiển thị form để nhập tên chủ đề và lưu vào cơ sở dữ liệu -->
             <div class="modal fade" id="addTopicModal" tabindex="-1" aria-labelledby="addTopicModalLabel" aria-hidden="true">
                 <div class="modal-dialog">
                     <div class="modal-content">
@@ -264,7 +281,7 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
                 </div>
             </div>
 
-            <!-- Edit Topic Modal -->
+            <!-- Chỉnh sửa và cập nhật chủ đề-->
             <div class="modal fade" id="editTopicModal" tabindex="-1" aria-labelledby="editTopicModalLabel" aria-hidden="true">
                 <div class="modal-dialog">
                     <div class="modal-content">
@@ -307,4 +324,4 @@ $baseUrl = '/posts'; // Đổi thành tên thư mục dự án của bạn
         });
     </script>
 </body>
-</html> 
+</html>

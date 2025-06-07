@@ -1,52 +1,56 @@
 <?php
-require_once 'config/database.php';
-require_once 'auth/auth.php';
+require_once 'config/database.php'; // Kết nối tới cơ sở dữ liệu
+require_once 'auth/auth.php'; // Kiểm tra đăng nhập, xác thực người dùng
 
-// Require login to create posts
+// Yêu cầu người dùng đã đăng nhập trước khi đăng bài
 requireLogin();
 
 $error = '';
 $success = '';
 
-// Fetch topics from the database
+// Lấy danh sách chủ đề từ database để hiển thị trong dropdown
 $topics_query = "SELECT id, name FROM topics ORDER BY name ASC";
 $topics_result = mysqli_query($conn, $topics_query);
 $topics = mysqli_fetch_all($topics_result, MYSQLI_ASSOC);
 
+// Xử lý khi người dùng gửi form đăng bài (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = $_POST['title'] ?? '';
     $content = $_POST['content'] ?? '';
-    $topic_id = $_POST['topic_id'] ?? null; // Get selected topic_id
+    $topic_id = $_POST['topic_id'] ?? null; // Lấy topic_id được chọn
     
-    // Validate topic_id
+    // Kiểm tra topic_id hợp lệ
     if ($topic_id !== null && $topic_id !== '') {
         $topic_id = (int)$topic_id;
-        // Optional: Validate if the topic_id exists in the database
+        // Kiểm tra topic_id có tồn tại trong database không
         $check_topic_query = "SELECT id FROM topics WHERE id = $topic_id";
         $check_topic_result = mysqli_query($conn, $check_topic_query);
         if (mysqli_num_rows($check_topic_result) == 0) {
-            $topic_id = null; // Set to null if topic_id is invalid
+            $topic_id = null; // Nếu không hợp lệ thì gán null
         }
     } else {
-        $topic_id = null; // Set to null if no topic is selected
+        $topic_id = null; // Nếu không chọn chủ đề thì gán null
     }
 
+    // Kiểm tra dữ liệu hợp lệ
     if (empty($title) || empty($content)) {
-        $error = 'Please fill in all fields';
+        $error = 'Vui lòng điền đầy đủ tiêu đề và nội dung';
     } else {
+        // Dùng hàm này để làm sạch dữ liệu, tránh việc người khác chèn mã lạ vào câu lệnh truy vấn (bảo vệ an toàn cho database)
         $title = mysqli_real_escape_string($conn, $title);
         $content = mysqli_real_escape_string($conn, $content);
         $user_id = $_SESSION['user_id'];
         
-        // Include topic_id in the INSERT query
+        // Thêm bài viết mới vào database, có thể có hoặc không có chủ đề
         $query = "INSERT INTO posts (user_id, title, content, topic_id) VALUES ($user_id, '$title', '$content', " . ($topic_id === null ? "NULL" : $topic_id) . ")";
 
         if (mysqli_query($conn, $query)) {
             $post_id = mysqli_insert_id($conn);
+            // Chuyển hướng sang trang chi tiết bài viết vừa tạo
             header("Location: post.php?id=$post_id");
             exit();
         } else {
-            $error = 'Failed to create post';
+            $error = 'Đăng bài thất bại';
         }
     }
 }
@@ -64,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="<?=$baseUrl?>/global.css">
 </head>
 <body>
-<?php include 'navbar.php'; ?>
+<?php include 'navbar.php'; // Hiển thị thanh điều hướng ?>
 
     <div class="container mt-4">
         <div class="row justify-content-center">
@@ -75,11 +79,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="card-body">
                         <?php if ($error): ?>
-                            <div class="alert alert-danger"><?php echo $error; ?></div>
+                            <div class="alert alert-danger"><?php echo $error; ?></div> <!-- Hiển thị lỗi nếu có -->
                         <?php endif; ?>
                         
                         <?php if ($success): ?>
-                            <div class="alert alert-success"><?php echo $success; ?></div>
+                            <div class="alert alert-success"><?php echo $success; ?></div> <!-- Hiển thị thông báo thành công nếu có -->
                         <?php endif; ?>
                         
                         <form method="POST" action="" onsubmit="return submitQuillContent();">
@@ -88,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="text" class="form-control" id="title" name="title" required>
                             </div>
 
-                            <!-- Topic Selection Dropdown -->
+                            <!-- Dropdown chọn chủ đề -->
                             <div class="mb-3">
                                 <label for="topic" class="form-label">Chủ đề</label>
                                 <select class="form-select" id="topic" name="topic_id">
@@ -101,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             <div class="mb-3">
                                 <label for="content" class="form-label">Nội dung</label>
+                                <!-- Editor QuillJS để nhập nội dung bài viết -->
                                 <div id="quill-editor" style="height: 300px;"></div>
                                 <input type="hidden" id="content" name="content">
                             </div>
@@ -118,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
     <script>
+    // Khởi tạo QuillJS editor với các công cụ định dạng
     var quill = new Quill('#quill-editor', {
         theme: 'snow',
         modules: {
@@ -136,12 +142,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ['clean']
                 ],
                 handlers: {
-                    image: imageHandler
+                    image: imageHandler // Xử lý khi chèn ảnh
                 }
             }
         }
     });
 
+    // Hàm upload ảnh lên server khi chèn vào Quill
     function uploadImageToServer(file, callback) {
         var formData = new FormData();
         formData.append('image', file);
@@ -151,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (xhr.status === 200) {
                 var res = JSON.parse(xhr.responseText);
                 if (res.url) {
-                    callback(res.url);
+                    callback(res.url); // Trả về link ảnh sau khi upload thành công
                 } else {
                     alert(res.error || 'Lỗi upload ảnh');
                 }
@@ -162,6 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         xhr.send(formData);
     }
 
+    // Xử lý khi người dùng chọn/chèn ảnh vào editor
     function imageHandler() {
         var input = document.createElement('input');
         input.setAttribute('type', 'file');
@@ -178,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         };
     }
 
-    // Xử lý paste ảnh
+    // Xử lý paste ảnh từ clipboard vào editor
     quill.root.addEventListener('paste', function(e) {
         var clipboardData = e.clipboardData || window.clipboardData;
         if (clipboardData && clipboardData.items) {
@@ -195,7 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     });
-    // Xử lý drag-drop ảnh
+    // Xử lý kéo-thả ảnh vào ô nhập bài viết: khi bạn kéo ảnh vào, ảnh sẽ được tải lên và chèn vào đúng vị trí con trỏ
     quill.root.addEventListener('drop', function(e) {
         if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
             e.preventDefault();
@@ -209,8 +217,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     });
 
+    // Khi bấm nút Đăng bài, lấy nội dung đã soạn từ Quill và loại bỏ ảnh dán trực tiếp (ảnh base64), chỉ giữ lại ảnh đã tải lên
     function submitQuillContent() {
-        // Loại bỏ ảnh base64 nếu còn sót lại
         var html = quill.root.innerHTML.replace(/<img[^>]+src=["']data:image\/(png|jpeg|jpg|gif|webp);base64,[^"']+["'][^>]*>/gi, '');
         document.getElementById('content').value = html;
         return true;
@@ -218,4 +226,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </script>
 </body>
 </html>
-<?php include 'footer.php'; ?> 
+<?php include 'footer.php'; // Hiển thị chân trang ?>
