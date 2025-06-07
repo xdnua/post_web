@@ -56,7 +56,7 @@ $total_posts = mysqli_fetch_assoc($count_result)['total'];
 $total_pages = ceil($total_posts / $limit);
 
 // Lấy danh sách bài đăng cho trang hiện tại kèm thông tin người dùng (có áp dụng tìm kiếm nếu có)
-$query = "SELECT p.*, u.username, 
+$query = "SELECT p.*, u.username, u.first_name, u.last_name, 
           (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'like') as like_count,
           (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'dislike') as dislike_count,
           (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count
@@ -216,7 +216,20 @@ $baseUrl = '/posts';
                                         <tr>
                                             <td><?php echo $post['id']; ?></td>
                                             <td><?php echo htmlspecialchars($post['title']); ?></td>
-                                            <td><?php echo htmlspecialchars($post['username']); ?></td>
+                                            <td>
+                                                <?php
+                                                // Ưu tiên hiển thị họ tên nếu có, nếu không thì lấy username
+                                                $authorDisplayName = htmlspecialchars($post['username']);
+                                                if (!empty($post['first_name']) && !empty($post['last_name'])) {
+                                                    $authorDisplayName = htmlspecialchars($post['first_name']) . ' ' . htmlspecialchars($post['last_name']);
+                                                } elseif (!empty($post['first_name'])) {
+                                                    $authorDisplayName = htmlspecialchars($post['first_name']);
+                                                } elseif (!empty($post['last_name'])) {
+                                                    $authorDisplayName = htmlspecialchars($post['last_name']);
+                                                }
+                                                echo $authorDisplayName;
+                                                ?>
+                                            </td>
                                             <td><?php echo date('d/m/Y', strtotime($post['created_at'])); ?></td>
                                             <td>
                                                 <span class="badge bg-primary me-1">

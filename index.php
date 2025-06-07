@@ -6,7 +6,7 @@ require_once 'auth/auth.php'; // Kiểm tra đăng nhập, xác thực người 
 // Xử lý phân trang, tìm kiếm, lọc chủ đề
 
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1; // Lấy số trang hiện tại từ URL, mặc định là 1
-$limit = 10; // Số bài viết mỗi trang
+$limit = 6; // Số bài viết mỗi trang (chỉ hiện 6 bài viết mới nhất trên trang chủ)
 $offset = ($page - 1) * $limit; // Vị trí bắt đầu lấy dữ liệu
 $search_term = $_GET['search'] ?? ''; // Từ khóa tìm kiếm (nếu có)
 $topic_id = isset($_GET['topic_id']) ? (int)$_GET['topic_id'] : null; // Lọc theo chủ đề (nếu có)
@@ -38,9 +38,20 @@ if (!empty($conditions)) {
 
 
 // Lấy danh sách chủ đề để hiển thị tab chủ đề
-// Sửa lại truy vấn để sắp xếp theo id tăng dần (theo thứ tự thêm vào)
 $topics_query = "SELECT id, name FROM topics ORDER BY id ASC";
 $topics_result = mysqli_query($conn, $topics_query);
+$topics = [];
+if ($topics_result) {
+    // Đảm bảo reset con trỏ và lấy lại dữ liệu từ đầu
+    mysqli_data_seek($topics_result, 0);
+    while ($row = mysqli_fetch_row($topics_result)) {
+        // $row[0] là id, $row[1] là name
+        $topics[] = [
+            'id' => $row[0],
+            'name' => $row[1]
+        ];
+    }
+}
 
 // Nếu có chọn chủ đề, lấy tên chủ đề để hiển thị
 $selected_topic_name = '';
@@ -200,25 +211,19 @@ $baseUrl = '/posts';
 
             <!-- Topic Tabs -->
             <div style="overflow-x: auto; white-space: nowrap; padding-bottom: 15px; -webkit-overflow-scrolling: touch;">
-                <ul class="nav nav-tabs justify-content-center border-0 mb-4" id="topicTabs" role="tablist" style="flex-wrap: nowrap;">
-                 <li class="nav-item" role="presentation">
-                <button class="nav-link <?php echo ($topic_id === null) ? 'active' : ''; ?>" id="all-topics-tab" data-bs-toggle="tab" data-bs-target="#all-topics" type="button" role="tab" aria-controls="all-topics" aria-selected="<?php echo ($topic_id === null) ? 'true' : 'false'; ?>" onclick="window.location.href='index.php<?php echo !empty($search_term) ? '?search=' . htmlspecialchars($search_term) : ''; ?>#topics-section'">Tất cả</button>
-                </li>
-                <?php 
-                 // Rewind the topics result set to iterate again for tabs
-                if ($topics_result) {
-                    mysqli_data_seek($topics_result, 0);
-                }
-                ?>
-                <?php if ($topics_result && mysqli_num_rows($topics_result) > 0): ?>
-                    <?php while ($topic = mysqli_fetch_assoc($topics_result)): ?>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link <?php echo ($topic_id == $topic['id']) ? 'active' : ''; ?>" id="topic-<?php echo $topic['id']; ?>-tab" data-bs-toggle="tab" data-bs-target="#topic-<?php echo $topic['id']; ?>" type="button" role="tab" aria-controls="topic-<?php echo $topic['id']; ?>" aria-selected="<?php echo ($topic_id == $topic['id']) ? 'true' : 'false'; ?>" onclick="window.location.href='index.php?topic_id=<?php echo $topic['id']; ?><?php echo !empty($search_term) ? '&search=' . htmlspecialchars($search_term) : ''; ?>#topics-section'">
-                                <?php echo htmlspecialchars($topic['name']); ?>
-                            </button>
-                        </li>
-                    <?php endwhile; ?>
-                <?php endif; ?>
+                <ul class="nav nav-tabs border-0 mb-4" id="topicTabs" role="tablist" style="display: flex; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; max-width: 100vw; min-width: 0; justify-content: flex-start; padding: 0;">
+<?php if (!empty($topics)): ?>
+    <?php /*
+        Trả về mặc định: không thêm margin, không gap, không padding hai bên, chỉ giữ min-width cho li để tab không bị bóp méo.
+    */ ?>
+    <?php foreach ($topics as $topic): ?>
+        <li class="nav-item" role="presentation" style="min-width: 120px;">
+            <button class="nav-link <?php echo ($topic_id == $topic['id']) ? 'active' : ''; ?>" id="topic-<?php echo $topic['id']; ?>-tab" data-bs-toggle="tab" data-bs-target="#topic-<?php echo $topic['id']; ?>" type="button" role="tab" aria-controls="topic-<?php echo $topic['id']; ?>" aria-selected="<?php echo ($topic_id == $topic['id']) ? 'true' : 'false'; ?>" onclick="window.location.href='index.php?topic_id=<?php echo $topic['id']; ?><?php echo !empty($search_term) ? '&search=' . htmlspecialchars($search_term) : ''; ?>#topics-section'">
+                <?php echo htmlspecialchars($topic['name'], ENT_QUOTES, 'UTF-8'); ?>
+            </button>
+        </li>
+    <?php endforeach; ?>
+<?php endif; ?>
             </ul>
             </div>
 
@@ -272,7 +277,7 @@ $baseUrl = '/posts';
                                                          // Lấy đường dẫn avatar, nếu không có thì dùng avatar mặc định
                                                          $authorAvatarPath = $baseUrl . '/dist/avatars/' . htmlspecialchars($post['avatar'] ?? 'default_avatar.png');
                                                          ?>
-                                                         Bởi<img src="<?=$authorAvatarPath?>" alt="Avatar" class="rounded-circle me-1" style="width: 20px; height: 20px; object-fit: cover;">
+                                                         Bởi  <img src="<?=$authorAvatarPath?>" alt="Avatar" class="rounded-circle me-1" style="width: 20px; height: 20px; object-fit: cover;">
                                                          <?=$authorDisplayName?>
                                                      </small>
                                                      <small class="text-muted"><?php echo date('d/m/Y', strtotime($post['created_at'])); ?></small>

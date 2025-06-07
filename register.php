@@ -31,7 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // Nếu hợp lệ, tiến hành đăng ký tài khoản mới
             if (register($username, $password, $email)) {
-                $success = 'Đăng ký thành công! Bạn có thể đăng nhập.';
+                // Đăng ký thành công, hiển thị thông báo màu xanh lá nổi bật ngay bên dưới form, sau 100ms chuyển sang đăng nhập
+                $success = 'Đăng ký thành công! Đang chuyển sang trang đăng nhập...';
+                echo '<script>setTimeout(function(){ window.location.href = "login.php?registered=1"; }, 100);</script>';
             } else {
                 $error = 'Đăng ký thất bại. Vui lòng thử lại.';
             }
