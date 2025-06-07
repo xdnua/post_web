@@ -1,0 +1,316 @@
+.navbar-custom {
+    background: linear-gradient(90deg, #99bbe8 0%, #e8a9bb 100%) !important;
+}
+
+.navbar-custom .navbar-brand,
+.navbar-custom .nav-link,
+.navbar-custom .nav-link i {
+    color: #fff !important;
+    font-weight: 500;
+}
+
+.navbar-custom .nav-link {
+    /* border: 1px solid white; */
+    border-radius: 50px;
+    padding: 5px 15px;
+    margin-right: 20px;
+}
+
+.navbar-custom .nav-link.active-nav-link {
+    border: 1px solid white; /* Add border to active link */
+}
+
+.navbar-custom .nav-link.text-danger {
+    color: #ff4d4f !important;
+}
+
+.navbar-custom .nav-link:hover,
+.navbar-custom .nav-link:focus {
+    color: #FFF !important;
+    text-decoration: none;
+    transition: transform 0.3s ease;
+    transform: scale(1.1);
+}
+
+.gradient-bg {
+    background: linear-gradient(90deg, #99bbe8 0%, #e8a9bb 100%);
+}
+
+.btn-primary {
+    background: linear-gradient(90deg, #99bbe8 0%, #e8a9bb 100%) !important;
+    border: 1px solid #FFF !important;
+    font-weight: 500 !important;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(90deg, #e8a9bb 0%, #99bbe8 100%) !important;
+}
+
+button {
+    text-decoration: none !important;
+}
+
+.navbar {
+    --bs-navbar-padding-y: 0.7rem;
+}
+
+body {
+    padding-top: 60px; /* Add padding to body to prevent content from being hidden by fixed navbar */
+}
+
+/* General body styling for background and rounded corners if needed */
+    body {
+        background-color: #f0f0f0; /* A light background outside the main content */
+    }
+.container {
+        /* Assuming the main content has a max-width and rounded corners */
+        /* You might need a wrapper div around container if the rounded corner applies to the whole content block */
+    }
+
+/* Styles for Hero Section - Discover, Learn, Enjoy */
+.hero-design-section {
+        background: linear-gradient(90deg, #99bbe8 0%, #e8a9bb 100%); /* Adjust gradient colors if needed */
+        color: white;
+        padding: 80px 0; /* More padding */
+        border-bottom-left-radius: 50px; /* Large rounded corner bottom left */
+        border-bottom-right-radius: 50px; /* Large rounded corner bottom right */
+        margin-bottom: 40px; /* Space below hero */
+    }
+
+.hero-design-section h1 {
+    font-size: 3.5rem; /* Adjust font size */
+    font-weight: bold;
+}
+
+    .hero-design-section .lead {
+        font-size: 1.25rem;
+        opacity: 0.9;
+    }
+
+.hero-design-section .input-group {
+    max-width: 600px; /* Limit search bar width */
+}
+
+    .hero-design-section .form-control {
+        border-color: transparent !important; /* Remove border */
+        box-shadow: none !important; /* Remove shadow */
+    }
+
+    .hero-design-section .input-group-text {
+        background-color: white !important;
+        border-color: transparent !important;
+    }
+
+    .hero-design-section .btn-info {
+        background-color: #17a2b8 !important; /* Adjust button color if needed */
+        border-color: #17a2b8 !important;
+    }
+
+    .hero-design-section .btn-info:hover {
+        background-color: #138496 !important;
+        border-color: #117a8b !important;
+    }
+
+/* Styles for Featured Cards */
+    .featured-card {
+        border-radius: 10px; /* Card rounded corners */
+        overflow: hidden; /* Hide overflow for rounded corners */
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Card shadow */
+    }
+
+    .featured-card .card-title {
+        font-size: 1.25rem;
+        font-weight: bold;
+    }
+
+    .featured-card .card-text {
+        font-size: 0.95rem;
+        color: #555;
+    }
+
+    .featured-card img {
+        border-radius: 8px; /* Rounded corners for images inside cards */
+    }
+
+    .featured-card .btn-outline-primary {
+        border-width: 2px; /* Thicker border */
+        font-weight: bold;
+    }
+
+    .featured-card .badge {
+        font-size: 0.85rem;
+    }
+
+    /* Styles for Browse Topics Section */
+.topics-section {
+    padding: 40px 0;
+}
+
+.topics-section h2 {
+    margin-bottom: 30px;
+}
+
+.topics-section .nav-tabs {
+    border-bottom: none; /* Remove default border */
+}
+
+.topics-section .nav-link {
+    border: 1px solid transparent; /* Default state */
+    border-top-left-radius: 0.25rem;
+    border-top-right-radius: 0.25rem;
+    color: #555; /* Default text color */
+    margin: 0 5px;
+}
+
+.topics-section .nav-link.active {
+    color: purple; /* Active text color */
+    background-color: transparent; /* Active background color */
+    border-color: transparent transparent palevioletred transparent; /* Active bottom border */
+    font-weight: bold;
+}
+
+.topics-section .nav-link:hover:not(.active) {
+    border-color: transparent transparent #ccc transparent;
+}
+
+/* Styles for How it works timeline */
+.how-it-works-section {
+    background-color: #e9ecef; /* Light grey background */
+    padding: 60px 0; /* Padding */
+    margin-top: 40px; /* Space above */
+    margin-bottom: 40px; /* Space below */
+}
+.how-it-works-section h2 {
+    color: #333; /* Darker title color */
+}
+.timeline-how-it-works {
+    position: relative;
+    padding: 20px 0;
+}
+.timeline-how-it-works::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 20px; /* Adjust based on timeline-icon size */
+    width: 2px;
+    background-color: #FFF; /* Timeline line color */
+    z-index: 1;
+}
+.timeline-item {
+    position: relative;
+    margin-bottom: 30px;
+    padding-left: 60px; /* Space for the icon */
+}
+.timeline-icon {
+    position: absolute;
+    left: 0;
+    top: 5px; /* Adjust to align with content */
+    background-color: #FFF; /* Icon background color */
+    color: #000;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    z-index: 2;
+}
+.timeline-content {
+    padding: 15px;
+    background-color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.timeline-content h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.3rem;
+}
+.timeline-content p {
+    margin-bottom: 0;
+    font-size: 0.95rem;
+    color: #555;
+}
+
+/* Responsive adjustments for timeline */
+@media (max-width: 768px) {
+    .timeline-how-it-works::before {
+        left: 15px;
+    }
+    .timeline-item {
+        padding-left: 45px;
+        margin-bottom: 20px;
+    }
+    .timeline-icon {
+        width: 30px;
+        height: 30px;
+        font-size: 1rem;
+        top: 8px;
+    }
+    .timeline-content {
+        padding: 10px;
+    }
+    .timeline-content h4 {
+        font-size: 1.2rem;
+    }
+    .timeline-content p {
+        font-size: 0.9rem;
+    }
+}
+
+/* Styles for FAQ Section */
+
+
+.rounded-pill-start {
+    border-top-left-radius: 50rem !important;
+    border-bottom-left-radius: 50rem !important;
+}
+
+.rounded-pill-end {
+    border-top-right-radius: 50rem !important;
+    border-bottom-right-radius: 50rem !important;
+}
+
+/* Styles for Get in Touch Section */
+.get-in-touch-section {
+    background-color: #f8f9fa; /* Light grey background */
+    padding: 60px 0;
+}
+.get-in-touch-section h2 {
+    margin-bottom: 40px;
+}
+.get-in-touch-section .card {
+    border: none; /* Remove card border */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Subtle shadow */
+    border-radius: 8px;
+}
+.get-in-touch-section .card-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+.get-in-touch-section .card-text {
+    color: #555;
+    margin-bottom: 8px;
+}
+.get-in-touch-section .social-icons a {
+    font-size: 1.5rem;
+    margin-right: 15px;
+    color: #007bff; /* Icon color */
+}
+
+.page-item.active .page-link {
+    background: linear-gradient(90deg, #99bbe8 0%, #e8a9bb 100%) !important; /* Active state gradient */
+    border-color: #99bbe8 #e8a9bb #e8a9bb #99bbe8 !important; /* Active state border color */
+    color: #FFF;
+}
+
+.page-link, .page-link:hover {
+    color: purple;
+}
+
+.admin-page body {
+    padding-top: 0px !important;
+}
