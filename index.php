@@ -446,6 +446,18 @@ $baseUrl = '/posts';
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // Kiểm tra nếu URL có tham số "search"
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('search')) {
+        // Lấy phần tử "Chủ Đề" bằng ID
+        const topicsSection = document.getElementById('topics-section');
+        if (topicsSection) {
+            // Cuộn xuống phần "Chủ Đề"
+            topicsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+</script>
 </body>
 </html>
 <?php include 'footer.php'; ?>

@@ -26,9 +26,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 <li class="nav-item">
                     <a class="nav-link <?php if($currentPage == 'about.php') echo 'active-nav-link'; ?>" href="<?=$baseUrl?>/about.php">Giới thiệu</a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link <?php if($currentPage == 'contact.php') echo 'active-nav-link'; ?>" href="<?=$baseUrl?>/contact.php">Liên hệ</a>
-                </li>
+                
                 <?php if (isLoggedIn()): ?>
                     <?php
                     $loggedInUserId = $_SESSION['user_id'];
@@ -132,7 +130,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                                             <div style="flex: 1;">
                                                 <div>
                                                     <strong><?=htmlspecialchars($noti['username'])?></strong>
-                                                    <?=($noti['type'] == 'like') ? 'đã thích bài viết của bạn' : 'đã bình luận bài viết của bạn'?>
+                                                    <?=($noti['type'] == 'like') ? 'đã bày tỏ cảm xúc về bài viết của bạn' : 'đã bình luận bài viết của bạn'?>
                                                 </div>
                                                 <small class="text-muted"><?=date('d/m/Y H:i', strtotime($noti['created_at']))?></small>
                                             </div>
