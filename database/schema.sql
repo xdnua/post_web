@@ -43,3 +43,13 @@ CREATE TABLE likes (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE KEY unique_like (post_id, user_id)
 ); 
+
+CREATE TABLE saved_posts (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    post_id INT,
+    saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_save (user_id, post_id)
+);

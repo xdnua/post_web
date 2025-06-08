@@ -224,6 +224,32 @@ function getReplies($comment_id, $limit = 5, $offset = 0) {
                      LIMIT $limit OFFSET $offset";
     return mysqli_query($conn, $replies_query);
 }
+
+$bookmarked = false;
+if (isLoggedIn()) {
+    $user_id = $_SESSION['user_id'];
+    $check_saved_query = "SELECT 1 FROM saved_posts WHERE user_id = $user_id AND post_id = $post_id";
+    $check_saved_result = mysqli_query($conn, $check_saved_query);
+    $bookmarked = mysqli_num_rows($check_saved_result) > 0;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bookmark']) && isLoggedIn()) {
+    $user_id = $_SESSION['user_id'];
+    $post_id = $_GET['id']; // Đảm bảo có ?id= trên URL
+    $bookmark_action = $_POST['bookmark'];
+
+    if ($bookmark_action === 'save') {
+        $insert_sql = "INSERT IGNORE INTO saved_posts (user_id, post_id) VALUES ($user_id, $post_id)";
+        mysqli_query($conn, $insert_sql);
+    } elseif ($bookmark_action === 'unsave') {
+        $delete_sql = "DELETE FROM saved_posts WHERE user_id = $user_id AND post_id = $post_id";
+        mysqli_query($conn, $delete_sql);
+    }
+
+    // Tránh F5 bị gửi lại form
+    header("Location: post.php?id=$post_id");
+    exit();
+}
 ?>
 
 <!DOCTYPE html>
@@ -295,6 +321,12 @@ function getReplies($comment_id, $limit = 5, $offset = 0) {
                         <button class="btn btn-outline-secondary" onclick="sharePost()">
                             <i class="bi bi-share"></i> Chia sẻ
                         </button>
+                        <form method="POST" action="" class="d-inline">
+                            <input type="hidden" name="bookmark" value="<?php echo $bookmarked ? 'unsave' : 'save'; ?>">
+                            <button type="submit" class="btn btn-outline-warning">
+                                <i class="bi-bookmark"></i> <?php echo $bookmarked ? 'Hủy lưu' : 'Lưu'; ?>
+                            </button>
+                        </form>
                     </div>
                 <?php endif; ?>
             </div>

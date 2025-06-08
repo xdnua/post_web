@@ -60,10 +60,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                             <i class="bi bi-journal-text"></i> Bài viết
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdownPosts">
+                            <li><a class="dropdown-item <?php if($currentPage == 'my_saves.php') echo 'active-dropdown-link'; ?>" href="<?=$baseUrl?>/my_bookmarks.php"><i class="bi-bookmark"></i> Bài viết đã lưu</a></li>
                             <li><a class="dropdown-item <?php if($currentPage == 'my_posts.php') echo 'active-dropdown-link'; ?>" href="<?=$baseUrl?>/my_posts.php"><i class="bi bi-journal-text"></i> Bài đăng của tôi</a></li>
-                            <li><a class="dropdown-item <?php if($currentPage == 'create_post.php') echo 'active-dropdown-link'; ?>" href="<?=$baseUrl?>/create_post.php"><i class="bi bi-plus-square"></i> Đăng bài mới</a></li>
-                        </ul>
-                    </li>
+                            <li><a class="dropdown-item <?php if($currentPage == 'create_post.php') echo 'active-dropdown-link'; ?>" href="<?=$baseUrl?>/create_post.php"><i class="bi bi-plus-square"></i> Đăng bài mới</a></li>                        </ul>
+                         </li>
                 <?php endif; ?>
             </ul>
             <!-- Menu bên phải: Đăng nhập/Đăng ký hoặc Tên người dùng/Đăng xuất -->
