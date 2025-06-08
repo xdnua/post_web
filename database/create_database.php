@@ -34,7 +34,7 @@ if ($connect->connect_error) {
 echo "Đã kết nối tới CSDL, tiếp tục dòng code bên dưới đây.<br>";
 
 // Tạo bảng users
-$sql = "CREATE TABLE users (
+$sql = "CREATE TABLE IF NOT EXISTS users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(50) UNIQUE NOT NULL,
     first_name VARCHAR(255) NULL,
@@ -52,7 +52,7 @@ $sql = "CREATE TABLE users (
     }
 
 // Tạo bảng topics
-$sql1 = "CREATE TABLE topics (
+$sql1 = "CREATE TABLE IF NOT EXISTS topics (
     id INT(11) NOT NULL  PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -64,7 +64,7 @@ $sql1 = "CREATE TABLE topics (
     }
 
 // Tạo bảng posts
-$sql2 = "CREATE TABLE posts (
+$sql2 = "CREATE TABLE IF NOT EXISTS posts (
     id INT PRIMARY KEY AUTO_INCREMENT,
     topic_id INT(11) NULL,
     user_id INT,
@@ -82,7 +82,7 @@ $sql2 = "CREATE TABLE posts (
     }
 
 // Tạo bảng comments   
-$sql3 = "CREATE TABLE comments (
+$sql3 = "CREATE TABLE IF NOT EXISTS comments (
     id INT PRIMARY KEY AUTO_INCREMENT,
     post_id INT,
     user_id INT,
@@ -101,7 +101,7 @@ $sql3 = "CREATE TABLE comments (
     }
 
 // Tạo bảng likes    
-$sql4 = "CREATE TABLE likes (
+$sql4 = "CREATE TABLE IF NOT EXISTS likes (
     id INT PRIMARY KEY AUTO_INCREMENT,
     post_id INT,
     user_id INT,
@@ -116,6 +116,38 @@ $sql4 = "CREATE TABLE likes (
     } else {
         echo "Lỗi khi tạo bảng: " . $conn->error;
     }
+
+// Tạo bảng bookmarks (lưu bài viết yêu thích)
+$sql5 = "CREATE TABLE IF NOT EXISTS bookmarks (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    post_id INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_bookmark (user_id, post_id)
+    )";
+if ($connect->query($sql5)===TRUE){
+    echo "Tạo bảng bookmarks thành công!";
+} else {
+    echo "Lỗi khi tạo bảng: " . $conn->error;
+}
+
+// Tạo bảng read_history (lưu lịch sử đọc bài viết)
+$sql6 = "CREATE TABLE IF NOT EXISTS read_history (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    post_id INT NOT NULL,
+    last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_read (user_id, post_id)
+    )";
+if ($connect->query($sql6)===TRUE){
+    echo "Tạo bảng read_history thành công!";
+} else {
+    echo "Lỗi khi tạo bảng: " . $conn->error;
+}
 
 echo "Cơ sở dữ liệu và bảng đã tạo thành công với ràng buộc hợp lý.";
 // Đóng kết nối 

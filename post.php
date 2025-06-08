@@ -224,6 +224,32 @@ function getReplies($comment_id, $limit = 5, $offset = 0) {
                      LIMIT $limit OFFSET $offset";
     return mysqli_query($conn, $replies_query);
 }
+
+// ====== XỬ LÝ LƯU BÀI VIẾT YÊU THÍCH (BOOKMARK) ======
+if (isLoggedIn() && isset($_POST['bookmark_post'])) {
+    $user_id = $_SESSION['user_id'];
+    // Kiểm tra đã bookmark chưa
+    $checkBookmark = mysqli_query($conn, "SELECT * FROM bookmarks WHERE user_id = $user_id AND post_id = $post_id");
+    if (mysqli_num_rows($checkBookmark) == 0) {
+        // Nếu chưa bookmark thì thêm mới
+        mysqli_query($conn, "INSERT INTO bookmarks (user_id, post_id, created_at) VALUES ($user_id, $post_id, NOW())");
+    }
+    // Sau khi bookmark xong, reload lại trang để cập nhật giao diện
+    header("Location: post.php?id=$post_id");
+    exit();
+}
+
+// ====== GHI NHẬN LỊCH SỬ ĐỌC BÀI VIẾT ======
+if (isLoggedIn()) {
+    $user_id = $_SESSION['user_id'];
+    // Ghi nhận lịch sử đọc, nếu đã có thì cập nhật thời gian, nếu chưa có thì thêm mới
+    $checkHistory = mysqli_query($conn, "SELECT * FROM read_history WHERE user_id = $user_id AND post_id = $post_id");
+    if (mysqli_num_rows($checkHistory) > 0) {
+        mysqli_query($conn, "UPDATE read_history SET last_read_at = NOW() WHERE user_id = $user_id AND post_id = $post_id");
+    } else {
+        mysqli_query($conn, "INSERT INTO read_history (user_id, post_id, last_read_at) VALUES ($user_id, $post_id, NOW())");
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -295,6 +321,21 @@ function getReplies($comment_id, $limit = 5, $offset = 0) {
                         <button class="btn btn-outline-secondary" onclick="sharePost()">
                             <i class="bi bi-share"></i> Chia sẻ
                         </button>
+                        <?php
+                        // Kiểm tra trạng thái đã bookmark chưa
+                        $user_id = $_SESSION['user_id'];
+                        $isBookmarked = false;
+                        $bookmarkCheck = mysqli_query($conn, "SELECT 1 FROM bookmarks WHERE user_id = $user_id AND post_id = $post_id LIMIT 1");
+                        if ($bookmarkCheck && mysqli_num_rows($bookmarkCheck) > 0) {
+                            $isBookmarked = true;
+                        }
+                        ?>
+                        <form method="POST" action="" class="d-inline">
+                            <input type="hidden" name="bookmark_post" value="1">
+                            <button type="submit" class="btn btn-outline-success" <?php if ($isBookmarked) echo 'disabled'; ?>>
+                                <i class="bi bi-bookmark<?php if ($isBookmarked) echo '-fill'; ?>"></i> <?php echo $isBookmarked ? 'Đã lưu' : 'Lưu bài viết'; ?>
+                            </button>
+                        </form>
                     </div>
                 <?php endif; ?>
             </div>
