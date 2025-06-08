@@ -250,6 +250,14 @@ if (isLoggedIn()) {
         mysqli_query($conn, "INSERT INTO read_history (user_id, post_id, last_read_at) VALUES ($user_id, $post_id, NOW())");
     }
 }
+
+// Ghi lại lịch sử đọc bài viết
+if (isLoggedIn() && $post_id) {
+    $user_id = $_SESSION['user_id'];
+    $read_query = "INSERT INTO read_history (user_id, post_id, last_read_at) VALUES ($user_id, $post_id, NOW()) 
+                    ON DUPLICATE KEY UPDATE last_read_at = NOW();";
+    mysqli_query($conn, $read_query);
+}
 ?>
 
 <!DOCTYPE html>

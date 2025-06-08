@@ -63,6 +63,9 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                             <li><a class="dropdown-item <?php if($currentPage == 'my_posts.php') echo 'active-dropdown-link'; ?>" href="<?=$baseUrl?>/my_posts.php"><i class="bi bi-journal-text"></i> Bài đăng của tôi</a></li>
                             <li><a class="dropdown-item <?php if($currentPage == 'create_post.php') echo 'active-dropdown-link'; ?>" href="<?=$baseUrl?>/create_post.php"><i class="bi bi-plus-square"></i> Đăng bài mới</a></li>
                             <li><a class="dropdown-item" href="<?=$baseUrl?>/bookmarks.php"><i class="bi bi-bookmark"></i> Bài viết đã lưu</a></li>
+                            <li><a class="dropdown-item <?php if($currentPage == 'read_history.php') echo 'active-dropdown-link'; ?>" href="<?=$baseUrl?>/read_history.php">
+                                <i class="bi bi-clock-history"></i> Lịch sử đọc bài viết
+                            </a></li>
                         </ul>
                     </li>
                 <?php endif; ?>
