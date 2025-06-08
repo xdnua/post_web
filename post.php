@@ -74,11 +74,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment'])) {
         $parent_id = isset($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
         
         $comment_query = "INSERT INTO comments (post_id, user_id, parent_id, content) VALUES ($post_id, $user_id, " . ($parent_id ? $parent_id : "NULL") . ", '$comment')";
-        if (mysqli_query($conn, $comment_query)) {
+       if (mysqli_query($conn, $comment_query)) {
+            $comment_id = mysqli_insert_id($conn); // Lấy ID của bình luận vừa tạo
+
+            // Xác định người nhận thông báo
+            if ($parent_id) {
+                // Trả lời bình luận => người nhận là chủ bình luận gốc
+                $receiver_query = "SELECT user_id FROM comments WHERE id = $parent_id";
+            } else {
+                // Bình luận mới => người nhận là chủ bài viết
+                $receiver_query = "SELECT user_id FROM posts WHERE id = $post_id";
+            }
+
+            $receiver_result = mysqli_query($conn, $receiver_query);
+            if ($receiver = mysqli_fetch_assoc($receiver_result)) {
+                $receiver_id = $receiver['user_id'];
+
+                // Không gửi thông báo nếu tự bình luận bài viết của mình
+                if ($receiver_id != $user_id) {
+                    $notify_query = "INSERT INTO notifications (receiver_id, sender_id, post_id, comment_id, type)
+                                     VALUES ($receiver_id, $user_id, $post_id, $comment_id, 'comment')";
+                    mysqli_query($conn, $notify_query);
+                }
+            }
+
             header("Location: post.php?id=$post_id");
             exit();
         } else {
-            $error = 'Failed to add comment';
+            $error = 'Thêm bình luận thất bại';
         }
     }
 }
@@ -111,23 +134,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_comment'])) {
     }
 }
 
-// Xử lý like/dislike cho bài viết
-// Nếu người dùng đã đăng nhập và gửi form like/dislike
 if (isset($_POST['action']) && isLoggedIn()) {
-    $action = $_POST['action']; // Lấy hành động (like hoặc dislike) từ form
-    $user_id = $_SESSION['user_id']; // Lấy ID người dùng hiện tại từ session
-    
-    // Xóa like/dislike cũ của người dùng này cho bài viết này (đảm bảo mỗi người chỉ có 1 like hoặc 1 dislike)
-    mysqli_query($conn, "DELETE FROM likes WHERE post_id = $post_id AND user_id = $user_id");
-    
-    // Nếu hành động là like hoặc dislike thì thêm mới vào bảng likes
+    $action = $_POST['action'];
+    $user_id = (int)$_SESSION['user_id'];
+    $post_id = (int)$post_id;
+
+    // Xóa tương tác cũ
+    $delete_query = "DELETE FROM likes WHERE post_id = $post_id AND user_id = $user_id";
+    mysqli_query($conn, $delete_query);
+
     if ($action === 'like' || $action === 'dislike') {
-        // Thêm bản ghi like/dislike vào bảng likes
+        // Thêm tương tác mới
         $like_query = "INSERT INTO likes (post_id, user_id, type) VALUES ($post_id, $user_id, '$action')";
         mysqli_query($conn, $like_query);
+
+        if ($action === 'like') {
+            $receiver_result = mysqli_query($conn, "SELECT user_id FROM posts WHERE id = $post_id LIMIT 1");
+            if ($receiver_result && mysqli_num_rows($receiver_result) > 0) {
+                $receiver_data = mysqli_fetch_assoc($receiver_result);
+                $receiver_id = (int)$receiver_data['user_id'];
+
+                if ($receiver_id !== $user_id) {
+                    // Kiểm tra thông báo like đã tồn tại chưa, nếu chưa thì thêm
+                    $check_notify = "SELECT id FROM notifications WHERE receiver_id = $receiver_id AND sender_id = $user_id AND post_id = $post_id AND type = 'like' LIMIT 1";
+                    $result_check = mysqli_query($conn, $check_notify);
+                    if (!$result_check || mysqli_num_rows($result_check) == 0) {
+                        $notify_query = "INSERT INTO notifications (receiver_id, sender_id, post_id, type) VALUES ($receiver_id, $user_id, $post_id, 'like')";
+                        mysqli_query($conn, $notify_query);
+                    }
+                }
+            }
+        }
+    } else if ($action === 'unlike') {
+        // Nếu có hành động hủy like, thì xóa luôn thông báo tương ứng
+        $receiver_result = mysqli_query($conn, "SELECT user_id FROM posts WHERE id = $post_id LIMIT 1");
+        if ($receiver_result && mysqli_num_rows($receiver_result) > 0) {
+            $receiver_data = mysqli_fetch_assoc($receiver_result);
+            $receiver_id = (int)$receiver_data['user_id'];
+            if ($receiver_id !== $user_id) {
+                $delete_notify = "DELETE FROM notifications WHERE receiver_id = $receiver_id AND sender_id = $user_id AND post_id = $post_id AND type = 'like'";
+                mysqli_query($conn, $delete_notify);
+            }
+        }
     }
-    
-    // Sau khi xử lý xong thì chuyển hướng về lại trang bài viết (theo nguyên tắc POST/Redirect/GET để tránh gửi lại form khi F5)
+
     header("Location: post.php?id=$post_id");
     exit();
 }
@@ -225,31 +275,52 @@ function getReplies($comment_id, $limit = 5, $offset = 0) {
     return mysqli_query($conn, $replies_query);
 }
 
-$bookmarked = false;
-if (isLoggedIn()) {
+// ====== XỬ LÝ LƯU BÀI VIẾT YÊU THÍCH (BOOKMARK) ======
+if (isLoggedIn() && isset($_POST['bookmark_post'])) {
     $user_id = $_SESSION['user_id'];
-    $check_saved_query = "SELECT 1 FROM saved_posts WHERE user_id = $user_id AND post_id = $post_id";
-    $check_saved_result = mysqli_query($conn, $check_saved_query);
-    $bookmarked = mysqli_num_rows($check_saved_result) > 0;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bookmark']) && isLoggedIn()) {
-    $user_id = $_SESSION['user_id'];
-    $post_id = $_GET['id']; // Đảm bảo có ?id= trên URL
-    $bookmark_action = $_POST['bookmark'];
-
-    if ($bookmark_action === 'save') {
-        $insert_sql = "INSERT IGNORE INTO saved_posts (user_id, post_id) VALUES ($user_id, $post_id)";
-        mysqli_query($conn, $insert_sql);
-    } elseif ($bookmark_action === 'unsave') {
-        $delete_sql = "DELETE FROM saved_posts WHERE user_id = $user_id AND post_id = $post_id";
-        mysqli_query($conn, $delete_sql);
+    // Kiểm tra đã bookmark chưa
+    $checkBookmark = mysqli_query($conn, "SELECT * FROM bookmarks WHERE user_id = $user_id AND post_id = $post_id");
+    if (mysqli_num_rows($checkBookmark) == 0) {
+        // Nếu chưa bookmark thì thêm mới
+        mysqli_query($conn, "INSERT INTO bookmarks (user_id, post_id, created_at) VALUES ($user_id, $post_id, NOW())");
     }
-
-    // Tránh F5 bị gửi lại form
+    // Sau khi bookmark xong, reload lại trang để cập nhật giao diện
     header("Location: post.php?id=$post_id");
     exit();
 }
+
+// ====== GHI NHẬN LỊCH SỬ ĐỌC BÀI VIẾT ======
+if (isLoggedIn()) {
+    $user_id = $_SESSION['user_id'];
+    // Ghi nhận lịch sử đọc, nếu đã có thì cập nhật thời gian, nếu chưa có thì thêm mới
+    $checkHistory = mysqli_query($conn, "SELECT * FROM read_history WHERE user_id = $user_id AND post_id = $post_id");
+    if (mysqli_num_rows($checkHistory) > 0) {
+        mysqli_query($conn, "UPDATE read_history SET last_read_at = NOW() WHERE user_id = $user_id AND post_id = $post_id");
+    } else {
+        mysqli_query($conn, "INSERT INTO read_history (user_id, post_id, last_read_at) VALUES ($user_id, $post_id, NOW())");
+    }
+}
+
+// Ghi lại lịch sử đọc bài viết
+if (isLoggedIn() && $post_id) {
+    $user_id = $_SESSION['user_id'];
+    $read_query = "INSERT INTO read_history (user_id, post_id, last_read_at) VALUES ($user_id, $post_id, NOW()) 
+                    ON DUPLICATE KEY UPDATE last_read_at = NOW();";
+    mysqli_query($conn, $read_query);
+}
+
+if (isset($_GET['notification_id']) && isLoggedIn()) {
+    $notificationId = intval($_GET['notification_id']);
+    $userId = $_SESSION['user_id'];
+
+    $sql = "UPDATE notifications SET seen = 1 WHERE id = ? AND receiver_id = ?";
+    if ($stmt = mysqli_prepare($conn, $sql)) {
+        mysqli_stmt_bind_param($stmt, 'ii', $notificationId, $userId);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+    }
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -321,10 +392,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bookmark']) && isLogg
                         <button class="btn btn-outline-secondary" onclick="sharePost()">
                             <i class="bi bi-share"></i> Chia sẻ
                         </button>
+                        <?php
+                        // Kiểm tra trạng thái đã bookmark chưa
+                        $user_id = $_SESSION['user_id'];
+                        $isBookmarked = false;
+                        $bookmarkCheck = mysqli_query($conn, "SELECT 1 FROM bookmarks WHERE user_id = $user_id AND post_id = $post_id LIMIT 1");
+                        if ($bookmarkCheck && mysqli_num_rows($bookmarkCheck) > 0) {
+                            $isBookmarked = true;
+                        }
+                        ?>
                         <form method="POST" action="" class="d-inline">
-                            <input type="hidden" name="bookmark" value="<?php echo $bookmarked ? 'unsave' : 'save'; ?>">
-                            <button type="submit" class="btn btn-outline-warning">
-                                <i class="bi-bookmark"></i> <?php echo $bookmarked ? 'Hủy lưu' : 'Lưu'; ?>
+                            <input type="hidden" name="bookmark_post" value="1">
+                            <button type="submit" class="btn btn-outline-success" <?php if ($isBookmarked) echo 'disabled'; ?>>
+                                <i class="bi bi-bookmark<?php if ($isBookmarked) echo '-fill'; ?>"></i> <?php echo $isBookmarked ? 'Đã lưu' : 'Lưu bài viết'; ?>
                             </button>
                         </form>
                     </div>

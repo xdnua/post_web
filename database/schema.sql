@@ -44,12 +44,43 @@ CREATE TABLE likes (
     UNIQUE KEY unique_like (post_id, user_id)
 ); 
 
-CREATE TABLE saved_posts (
+CREATE TABLE IF NOT EXISTS bookmarks (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT,
-    post_id INT,
-    saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    user_id INT NOT NULL,
+    post_id INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_save (user_id, post_id)
+    UNIQUE KEY unique_bookmark (user_id, post_id)
+);
+
+CREATE TABLE IF NOT EXISTS read_history (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    post_id INT NOT NULL,
+    last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_read (user_id, post_id)
+);
+
+CREATE TABLE notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    receiver_id INT NOT NULL,          -- Người nhận thông báo (chủ bài viết hoặc chủ bình luận)
+    sender_id INT NOT NULL,            -- Người gửi tương tác (người like hoặc comment)
+    post_id INT NOT NULL,              -- Bài viết liên quan (bắt buộc)
+    comment_id INT DEFAULT NULL,       -- Bình luận liên quan (nếu có, ví dụ comment reply)
+    type ENUM('like', 'comment') NOT NULL,  -- Loại thông báo: like hay comment
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    seen TINYINT(1) DEFAULT 0,        -- Trạng thái đã xem (0 = chưa xem, 1 = đã xem)
+
+    INDEX idx_receiver_id (receiver_id),
+    INDEX idx_sender_id (sender_id),
+    INDEX idx_post_id (post_id),
+    INDEX idx_comment_id (comment_id),
+
+    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE SET NULL
 );
