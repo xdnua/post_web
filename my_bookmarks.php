@@ -2,7 +2,7 @@
 require_once 'config/database.php'; // Kết nối DB
 require_once 'auth/auth.php'; // Xác thực
 
-$baseUrl = '/posts';
+$baseUrl = '/posts'; 
 $user_id = $_SESSION['user_id'] ?? 0;
 // Kiểm tra người dùng đã đăng nhập hay chưa
 if (!$user_id) {
@@ -42,11 +42,11 @@ $userAvatarPath = $baseUrl . '/dist/avatars/' . htmlspecialchars($loggedInUser['
 // Xử lý xóa bài viết đã lưu (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_post_id'])) {
     $delete_id = (int)$_POST['delete_post_id'];
-    $stmt = mysqli_prepare($conn, "DELETE FROM bookmarks WHERE post_id = ? AND user_id = ?");
-    if ($stmt) {
-        mysqli_stmt_bind_param($stmt, 'ii', $delete_id, $user_id);
-        mysqli_stmt_execute($stmt);
-        mysqli_stmt_close($stmt);
+    $stmt = mysqli_prepare($conn, "DELETE FROM bookmarks WHERE post_id = ? AND user_id = ?"); 
+    if ($stmt) { 
+        mysqli_stmt_bind_param($stmt, 'ii', $delete_id, $user_id); 
+        mysqli_stmt_execute($stmt); 
+        mysqli_stmt_close($stmt); 
     }
     header('Location: my_bookmarks.php');
     exit();

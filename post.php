@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_post'])) {
         // Lấy lại thông tin bài viết để kiểm tra quyền và lấy nội dung
         $post_query = "SELECT * FROM posts WHERE id = $post_id";
         $post_result = mysqli_query($conn, $post_query);
-        $post = mysqli_fetch_assoc($post_result);
+        $post = mysqli_fetch_assoc($post_result); 
         if ($post && ($post['user_id'] == $user_id || isAdmin())) {
             // Xóa ảnh trong nội dung bài viết (nếu có)
             $content = $post['content'];
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment'])) {
             }
 
             $receiver_result = mysqli_query($conn, $receiver_query);
-            if ($receiver = mysqli_fetch_assoc($receiver_result)) {
+            if ($receiver = mysqli_fetch_assoc($receiver_result)) { 
                 $receiver_id = $receiver['user_id'];
 
                 // Không gửi thông báo nếu tự bình luận bài viết của mình

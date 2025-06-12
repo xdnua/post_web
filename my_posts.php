@@ -9,13 +9,13 @@ $user_id = $_SESSION['user_id']; // Lấy id người dùng đang đăng nhập
 
 // Lấy thông tin người dùng để hiển thị (tên, họ, avatar)
 $userSql = "SELECT username, first_name, last_name, avatar FROM users WHERE id = ? LIMIT 1";
-$userStmt = mysqli_prepare($conn, $userSql);
-$loggedInUser = null;
+$userStmt = mysqli_prepare($conn, $userSql); 
+$loggedInUser = null; 
 if ($userStmt) {
-    mysqli_stmt_bind_param($userStmt, 'i', $user_id);
+    mysqli_stmt_bind_param($userStmt, 'i', $user_id); 
     mysqli_stmt_execute($userStmt);
-    $userResult = mysqli_stmt_get_result($userStmt);
-    $loggedInUser = mysqli_fetch_assoc($userResult);
+    $userResult = mysqli_stmt_get_result($userStmt); 
+    $loggedInUser = mysqli_fetch_assoc($userResult); 
     mysqli_stmt_close($userStmt);
 }
 
@@ -29,8 +29,8 @@ if ($loggedInUser && !empty($loggedInUser['first_name']) && !empty($loggedInUser
      $userDisplayName = htmlspecialchars($loggedInUser['last_name']);
 }
 
-$userAvatarPath = '';
-if ($loggedInUser) {
+$userAvatarPath = ''; // Đường dẫn đến ảnh đại diện của người dùng
+if ($loggedInUser) { 
     $userAvatarPath = $baseUrl . '/dist/avatars/' . htmlspecialchars($loggedInUser['avatar'] ?? 'default_avatar.png');
 }
 
@@ -163,7 +163,7 @@ $result = mysqli_query($conn, $query); // Thực thi truy vấn lấy bài viế
         $user_id = $_SESSION['user_id'];
         $query = "SELECT * FROM posts WHERE id = $delete_id AND user_id = $user_id";
         $result = mysqli_query($conn, $query);
-        $post = mysqli_fetch_assoc($result);
+        $post = mysqli_fetch_assoc($result); 
         if ($post) {
             // Xóa ảnh trong nội dung
             $imgs = [];

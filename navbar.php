@@ -4,7 +4,7 @@ require_once __DIR__ . '/auth/auth.php'; // Hàm xác thực đăng nhập
 require_once __DIR__ . '/config/database.php'; // Kết nối database
 
 $baseUrl = '/posts';
-$currentPage = basename($_SERVER['PHP_SELF']);
+$currentPage = basename($_SERVER['PHP_SELF']); //  Lấy tên file hiện tại để xác định trang đang xem
 ?>
 
 <link rel="stylesheet" href="<?=$baseUrl?>/global.css">
@@ -29,13 +29,13 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     
                 <?php if (isLoggedIn()): ?>
                     <?php
-                    $loggedInUserId = $_SESSION['user_id']; 
+                    $loggedInUserId = $_SESSION['user_id']; // Lấy ID người dùng đang đăng nhập từ session
                     $userSql = "SELECT username, first_name, last_name, avatar FROM users WHERE id = ? LIMIT 1";
-                    $userStmt = mysqli_prepare($conn, $userSql);
+                    $userStmt = mysqli_prepare($conn, $userSql); // Chuẩn bị câu truy vấn để lấy thông tin người dùng
                     $loggedInUser = null;
-                    // Lấy thông tin người dùng đang đăng nhập
+                   
 
-                    if ($userStmt) {
+                    if ($userStmt) { 
                         mysqli_stmt_bind_param($userStmt, 'i', $loggedInUserId);
                         mysqli_stmt_execute($userStmt);
                         $userResult = mysqli_stmt_get_result($userStmt);
