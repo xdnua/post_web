@@ -7,20 +7,19 @@ requireAdmin();
 
 // Truy vấn để lấy tổng số bài đăng, người dùng và chủ đề để hiển thị lên giao diện quản trị
 
-$total_posts_query = "SELECT COUNT(*) as total FROM posts";
-$total_posts_result = mysqli_query($conn, $total_posts_query);
-$total_posts = mysqli_fetch_assoc($total_posts_result)['total'];
+$total_posts_query = "SELECT COUNT(*) as total FROM posts"; // Truy vấn tổng số bài đăng
+$total_posts_result = mysqli_query($conn, $total_posts_query); // Gửi câu truy vấn SQL vừa tạo đến database thông qua kết nối $conn
+$total_posts = mysqli_fetch_assoc($total_posts_result)['total']; // Lấy kết quả truy vấn tổng số bài đăng dưới dạng mảng kết hợp
 
-$total_users_query = "SELECT COUNT(*) as total FROM users";
-$total_users_result = mysqli_query($conn, $total_users_query);
-$total_users = mysqli_fetch_assoc($total_users_result)['total'];
+$total_users_query = "SELECT COUNT(*) as total FROM users"; // Truy vấn tổng số người dùng
+$total_users_result = mysqli_query($conn, $total_users_query); // Thực hiện truy vấn gửi câu truy vấn SQL đến database
+$total_users = mysqli_fetch_assoc($total_users_result)['total']; // Lấy kết quả truy vấn tổng số người dùng dưới dạng mảng kết hợp
 
-$total_topics_query = "SELECT COUNT(*) as total FROM topics";
-$total_topics_result = mysqli_query($conn, $total_topics_query);
-$total_topics = mysqli_fetch_assoc($total_topics_result)['total'];
+$total_topics_query = "SELECT COUNT(*) as total FROM topics"; // Truy vấn tổng số chủ đề
+$total_topics_result = mysqli_query($conn, $total_topics_query); // Thực hiện truy vấn gửi câu truy vấn SQL đến database
+$total_topics = mysqli_fetch_assoc($total_topics_result)['total']; // Lấy kết quả truy vấn tổng số chủ đề dưới dạng mảng kết hợp
 
-$baseUrl = '/posts'; // Đặt biến $baseUrl để cấu hình đường dẫn cơ sở cho các liên kết trong giao diện quản trị
-
+$baseUrl = '/posts'; 
 ?>
 
 <!DOCTYPE html>
@@ -118,7 +117,7 @@ $baseUrl = '/posts'; // Đặt biến $baseUrl để cấu hình đường dẫn
                     <div class="card text-center bg-primary text-white mb-3">
                         <div class="card-body">
                             <h5 class="card-title"><i class="bi bi-journal-text"></i> Tổng số bài đăng</h5>
-                            <p class="card-text display-4"><?php echo $total_posts; ?></p>
+                            <p class="card-text display-4"><?php echo $total_posts; ?></p> 
                         </div>
                     </div>
                 </div>
@@ -140,7 +139,7 @@ $baseUrl = '/posts'; // Đặt biến $baseUrl để cấu hình đường dẫn
                 </div>
             </div>
 
-            <!-- Future dashboard content here - Bổ sung các nội dung khác trong tương lai -->
+    
 
         </div>
     </div>

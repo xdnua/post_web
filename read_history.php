@@ -1,7 +1,7 @@
 <?php
-require_once 'config/database.php';
-require_once 'auth/auth.php';
-
+require_once 'config/database.php'; // Kết nối tới cơ sở dữ liệu
+require_once 'auth/auth.php'; // Kiểm tra trạng thái đăng nhập
+// Kiểm tra nếu người dùng đã đăng nhập
 if (!isLoggedIn()) {
     header('Location: login.php');
     exit;

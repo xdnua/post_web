@@ -11,23 +11,22 @@ $offset = ($page - 1) * $limit; // Vị trí bắt đầu lấy dữ liệu
 $search_term = $_GET['search'] ?? ''; // Từ khóa tìm kiếm (nếu có)
 $topic_id = isset($_GET['topic_id']) ? (int)$_GET['topic_id'] : null; // Lọc theo chủ đề (nếu có)
 
-$conditions = []; // Mảng điều kiện truy vấn
-$param_values = []; // Mảng giá trị tham số truy vấn
-$param_types = ''; // Chuỗi kiểu dữ liệu tham số 
+$conditions = []; // Mảng chứa các điều kiện truy vấn
+$param_values = []; // Mảng chứa các giá trị tham số truy vấn
+$param_types = ''; // Chuỗi kiểu dữ liệu cho các tham số truy vấn
 
 // Nếu có từ khóa tìm kiếm, thêm điều kiện tìm kiếm vào truy vấn
 if (!empty($search_term)) {
     $conditions[] = " (p.title LIKE ? OR p.content LIKE ?) "; // Tìm trong tiêu đề hoặc nội dung
     $param_values[] = '%' . $search_term . '%';
-    $param_values[] = '%' . $search_term . '%';
-    $param_types .= 'ss'; // 2 tham số kiểu string
+    $param_types .= 'ss'; // 2 tham số kiểu string (title, content) để tìm kiếm
 }
 
 // Nếu có lọc theo chủ đề, thêm điều kiện chủ đề vào truy vấn
 if ($topic_id !== null) {
     $conditions[] = " p.topic_id = ? ";
     $param_values[] = $topic_id;
-    $param_types .= 'i'; // 1 tham số kiểu int
+    $param_types .= 'i'; // 1 tham số kiểu int để lọc theo chủ đề
 }
 
 // Ghép các điều kiện thành chuỗi WHERE
@@ -41,11 +40,10 @@ if (!empty($conditions)) {
 $topics_query = "SELECT id, name FROM topics ORDER BY id ASC";
 $topics_result = mysqli_query($conn, $topics_query);
 $topics = [];
-if ($topics_result) {
+if ($topics_result) { // Nếu truy vấn thành công
     // Đảm bảo reset con trỏ và lấy lại dữ liệu từ đầu
     mysqli_data_seek($topics_result, 0);
-    while ($row = mysqli_fetch_row($topics_result)) {
-        // $row[0] là id, $row[1] là name
+    while ($row = mysqli_fetch_row($topics_result)) { // Duyệt qua từng hàng kết quả
         $topics[] = [
             'id' => $row[0],
             'name' => $row[1]
@@ -58,15 +56,15 @@ $selected_topic_name = '';
 if ($topic_id !== null) {
     $topic_name_query = "SELECT name FROM topics WHERE id = ? LIMIT 1";
     $stmt_topic = mysqli_prepare($conn, $topic_name_query);
-     if ($stmt_topic) {
-        mysqli_stmt_bind_param($stmt_topic, 'i', $topic_id);
-        mysqli_stmt_execute($stmt_topic);
-        $topic_name_result = mysqli_stmt_get_result($stmt_topic);
-        $topic_name_row = mysqli_fetch_assoc($topic_name_result);
-        if ($topic_name_row) {
-            $selected_topic_name = $topic_name_row['name'];
+     if ($stmt_topic) { // Nếu truy vấn thành công
+        mysqli_stmt_bind_param($stmt_topic, 'i', $topic_id); // Liên kết tham số với kiểu dữ liệu là int
+        mysqli_stmt_execute($stmt_topic); // Thực thi truy vấn
+        $topic_name_result = mysqli_stmt_get_result($stmt_topic); // Lấy kết quả truy vấn
+        $topic_name_row = mysqli_fetch_assoc($topic_name_result); // Lấy tên chủ đề
+        if ($topic_name_row) { // Nếu có kết quả
+            $selected_topic_name = $topic_name_row['name']; // Lưu tên chủ đề đã chọn
         }
-        mysqli_stmt_close($stmt_topic);
+        mysqli_stmt_close($stmt_topic); // Đóng câu lệnh đã chuẩn bị
      } else {
         // Nếu lỗi truy vấn
         $error = 'Lỗi CSDL khi lấy tên chủ đề.';
@@ -229,15 +227,7 @@ $baseUrl = '/posts';
 
             
             <!--
-    
                 Hiển thị danh sách bài viết (posts)
-                
-                - Duyệt qua kết quả truy vấn $result để hiển thị từng bài viết.
-                - Hiển thị tiêu đề, tóm tắt nội dung (lấy 100 ký tự đầu, loại bỏ thẻ HTML), tên tác giả, avatar, ngày đăng, số lượt like/dislike.
-                - Nếu có họ tên thì ưu tiên hiển thị, nếu không thì lấy username.
-                - Avatar lấy từ thư mục /dist/avatars, nếu không có thì dùng ảnh mặc định.
-                - Nếu không có bài viết nào phù hợp với bộ lọc/tìm kiếm thì hiển thị thông báo phù hợp.
-                - Nút "Đọc tiếp" dẫn đến trang chi tiết bài viết (post.php?id=...).
             -->
             <div class="tab-content" id="topicTabsContent">
                 <div class="tab-pane fade show active" id="all-topics" role="tabpanel" aria-labelledby="all-topics-tab">
@@ -295,13 +285,7 @@ $baseUrl = '/posts';
                                          </div>
                                      </div>
                                  <?php endwhile; ?>
-                          <?php elseif (($result && mysqli_num_rows($result) == 0) || ($topics_result && mysqli_num_rows($topics_result) == 0 && empty($search_term) && $topic_id === null)): ?>
-                               <!--
-                                    Nếu không có bài viết nào phù hợp với filter/tìm kiếm hoặc không có chủ đề nào thì hiển thị thông báo phù hợp:
-                                    - Nếu có từ khóa tìm kiếm: thông báo không tìm thấy bài đăng cho từ khóa đó
-                                    - Nếu có lọc chủ đề: thông báo không tìm thấy bài đăng trong chủ đề đó
-                                    - Nếu không có chủ đề: thông báo không tìm thấy chủ đề
-                                    - Nếu không có bài đăng nào: thông báo chưa có bài đăng
+                          <?php elseif (($result && mysqli_num_rows($result) == 0) || ($topics_result && mysqli_num_rows($topics_result) == 0 && empty($search_term) && $topic_id === null)): ?> 
                                 -->
                               <div class="col-12 text-center">
                                      <div class="alert alert-info text-center mt-3 mb-0 mx-auto gradient-bg text-light" style="max-width: 300px;">
@@ -322,17 +306,10 @@ $baseUrl = '/posts';
                           <?php endif; ?>
                     </div>
                 </div>
-                <!-- Nếu muốn lọc chủ đề phía client thì thêm tab-pane ở đây -->
             </div>
 
             <!--
-               
                 Phân trang (Pagination)
-               
-                - Hiển thị các nút chuyển trang nếu tổng số trang > 1
-                - Nút << và >> để chuyển về trang trước/sau
-                - Các nút số trang, trang hiện tại được bôi đậm
-                - Giữ lại các tham số tìm kiếm, lọc chủ đề khi chuyển trang
             -->
             <?php if ($total_pages > 1): ?>
                 <nav aria-label="Page navigation">

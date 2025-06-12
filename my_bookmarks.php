@@ -4,7 +4,7 @@ require_once 'auth/auth.php'; // Xác thực
 
 $baseUrl = '/posts';
 $user_id = $_SESSION['user_id'] ?? 0;
-
+// Kiểm tra người dùng đã đăng nhập hay chưa
 if (!$user_id) {
     header('Location: /login.php');
     exit;
@@ -13,7 +13,7 @@ if (!$user_id) {
 // Lấy thông tin người dùng
 $userSql = "SELECT username, first_name, last_name, avatar FROM users WHERE id = ? LIMIT 1";
 $userStmt = mysqli_prepare($conn, $userSql);
-$loggedInUser = null;
+$loggedInUser = null; 
 if ($userStmt) {
     mysqli_stmt_bind_param($userStmt, 'i', $user_id);
     mysqli_stmt_execute($userStmt);
@@ -21,10 +21,10 @@ if ($userStmt) {
     $loggedInUser = mysqli_fetch_assoc($result);
     mysqli_stmt_close($userStmt);
 }
-
+// hiển thị tên người dùng
 $userDisplayName = '';
-if ($loggedInUser) {
-    if (!empty($loggedInUser['first_name']) && !empty($loggedInUser['last_name'])) {
+if ($loggedInUser) { 
+    if (!empty($loggedInUser['first_name']) && !empty($loggedInUser['last_name'])) { 
         $userDisplayName = htmlspecialchars($loggedInUser['first_name'] . ' ' . $loggedInUser['last_name']);
     } elseif (!empty($loggedInUser['first_name'])) {
         $userDisplayName = htmlspecialchars($loggedInUser['first_name']);
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_post_id'])) {
     exit();
 }
 
-// Lấy danh sách bài viết đã lưu (KHÔNG PHÂN TRANG, KHÔNG TÌM KIẾM)
+// Lấy danh sách bài viết đã lưu 
 $list_sql = "SELECT p.*, sp.created_at,
     (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'like') AS like_count,
     (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'dislike') AS dislike_count
@@ -60,9 +60,9 @@ $list_sql = "SELECT p.*, sp.created_at,
     JOIN posts p ON sp.post_id = p.id
     WHERE sp.user_id = ?
     ORDER BY sp.created_at DESC";
-
+    
 $list_stmt = mysqli_prepare($conn, $list_sql);
-if ($list_stmt) {
+if ($list_stmt) { 
     mysqli_stmt_bind_param($list_stmt, 'i', $user_id);
     mysqli_stmt_execute($list_stmt);
     $result = mysqli_stmt_get_result($list_stmt);

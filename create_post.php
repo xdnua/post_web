@@ -17,11 +17,11 @@ $topics = mysqli_fetch_all($topics_result, MYSQLI_ASSOC);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = $_POST['title'] ?? '';
     $content = $_POST['content'] ?? '';
-    $topic_id = $_POST['topic_id'] ?? null; // Lấy topic_id được chọn
+    $topic_id = $_POST['topic_id'] ?? null; // Lấy ID chủ đề từ form, có thể là null nếu không chọn chủ đề
     
     // Kiểm tra topic_id hợp lệ
-    if ($topic_id !== null && $topic_id !== '') {
-        $topic_id = (int)$topic_id;
+    if ($topic_id !== null && $topic_id !== '') { 
+        $topic_id = (int)$topic_id; 
         // Kiểm tra topic_id có tồn tại trong database không
         $check_topic_query = "SELECT id FROM topics WHERE id = $topic_id";
         $check_topic_result = mysqli_query($conn, $check_topic_query);
@@ -37,15 +37,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Vui lòng điền đầy đủ tiêu đề và nội dung';
     } else {
         // Dùng hàm này để làm sạch dữ liệu, tránh việc người khác chèn mã lạ vào câu lệnh truy vấn (bảo vệ an toàn cho database)
-        $title = mysqli_real_escape_string($conn, $title);
+        $title = mysqli_real_escape_string($conn, $title); 
         $content = mysqli_real_escape_string($conn, $content);
         $user_id = $_SESSION['user_id'];
         
         // Thêm bài viết mới vào database, có thể có hoặc không có chủ đề
         $query = "INSERT INTO posts (user_id, title, content, topic_id) VALUES ($user_id, '$title', '$content', " . ($topic_id === null ? "NULL" : $topic_id) . ")";
-
-        if (mysqli_query($conn, $query)) {
-            $post_id = mysqli_insert_id($conn);
+        
+        if (mysqli_query($conn, $query)) { 
+            $post_id = mysqli_insert_id($conn); 
             // Chuyển hướng sang trang chi tiết bài viết vừa tạo
             header("Location: post.php?id=$post_id");
             exit();

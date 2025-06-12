@@ -12,15 +12,16 @@ $success = '';
 
 // Xử lý xóa bài đăng
 if (isset($_POST['delete_post'])) {
-    $post_id = (int)$_POST['delete_post'];
+    $post_id = (int)$_POST['delete_post']; // Chuyển đổi ID bài đăng sang kiểu số nguyên
     // Lấy nội dung bài đăng để xóa bài đăng liên quan
     $get_content = mysqli_query($conn, "SELECT content FROM posts WHERE id = $post_id");
-    $row = mysqli_fetch_assoc($get_content);
+    $row = mysqli_fetch_assoc($get_content); // lấy nội dung bài viết để xóa ảnh liên quan
+    // Nếu bài đăng tồn tại và có nội dung
     if ($row && !empty($row['content'])) {
         // Tìm tất cả các đường dẫn ảnh trong nội dung bài viết
         if (preg_match_all('/src="(.*?)"/', $row['content'], $matches)) {
-            foreach ($matches[1] as $img_url) {
-                $img_path = $_SERVER['DOCUMENT_ROOT'] . parse_url($img_url, PHP_URL_PATH);
+            foreach ($matches[1] as $img_url) { 
+                $img_path = $_SERVER['DOCUMENT_ROOT'] . parse_url($img_url, PHP_URL_PATH); // Chuyển đổi URL ảnh thành đường dẫn hệ thống tập tin
                 // Nếu ảnh nằm trong thư mục uploads và tồn tại thì xóa
                 if (strpos($img_path, '/uploads/') !== false && file_exists($img_path)) {
                     @unlink($img_path);
@@ -28,6 +29,7 @@ if (isset($_POST['delete_post'])) {
             }
         }
     }
+    // Xóa bài đăng khỏi cơ sở dữ liệu
     $query = "DELETE FROM posts WHERE id = $post_id";
     if (mysqli_query($conn, $query)) {
         $success = 'Xóa bài đăng thành công';
@@ -37,16 +39,16 @@ if (isset($_POST['delete_post'])) {
 }
 
 // Thiết lập phân trang và tìm kiếm
-$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-$limit = 10;
-$offset = ($page - 1) * $limit;
-$search_term = $_GET['search'] ?? '';
-$search_condition = '';
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1; // Trang hiện tại, mặc định là trang 1
+$limit = 10; // Giới hạn số bài đăng hiển thị trên mỗi trang
+$offset = ($page - 1) * $limit; // Vị trí bắt đầu của bài đăng trong truy vấn
+$search_term = $_GET['search'] ?? ''; // Từ khóa tìm kiếm, mặc định là rỗng
+$search_condition = ''; // Điều kiện tìm kiếm, mặc định là rỗng
 
 // Nếu có từ khóa tìm kiếm thì thêm điều kiện vào truy vấn
 if (!empty($search_term)) {
-    $escaped_search_term = mysqli_real_escape_string($conn, $search_term);
-    $search_condition = " WHERE p.title LIKE '%$escaped_search_term%' OR p.content LIKE '%$escaped_search_term%'";
+    $escaped_search_term = mysqli_real_escape_string($conn, $search_term); 
+    $search_condition = " WHERE p.title LIKE '%$escaped_search_term%' OR p.content LIKE '%$escaped_search_term%'"; // Tìm kiếm theo tiêu đề hoặc nội dung bài đăng
 }
 
 // Đếm tổng số bài đăng (có áp dụng tìm kiếm nếu có)
@@ -62,7 +64,7 @@ $query = "SELECT p.*, u.username, u.first_name, u.last_name,
           (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count
           FROM posts p 
           JOIN users u ON p.user_id = u.id ";
-
+// Thêm điều kiện tìm kiếm vào truy vấn
 if (!empty($search_condition)) {
     // Nếu đã có WHERE thì thay bằng AND để nối điều kiện
      $query .= str_replace(' WHERE ', ' AND ', $search_condition);
@@ -71,6 +73,7 @@ if (!empty($search_condition)) {
      $query .= ' WHERE 1'; // Luôn bắt đầu với WHERE để dễ nối điều kiện
 }
 
+// Thêm điều kiện phân trang
 $query .= " ORDER BY p.created_at DESC LIMIT $limit OFFSET $offset";
 
 $result = mysqli_query($conn, $query);
@@ -221,15 +224,15 @@ $baseUrl = '/posts';
                                                 // Ưu tiên hiển thị họ tên nếu có, nếu không thì lấy username
                                                 $authorDisplayName = htmlspecialchars($post['username']);
                                                 if (!empty($post['first_name']) && !empty($post['last_name'])) {
-                                                    $authorDisplayName = htmlspecialchars($post['first_name']) . ' ' . htmlspecialchars($post['last_name']);
-                                                } elseif (!empty($post['first_name'])) {
+                                                    $authorDisplayName = htmlspecialchars($post['first_name']) . ' ' . htmlspecialchars($post['last_name']); 
+                                                } elseif (!empty($post['first_name'])) { 
                                                     $authorDisplayName = htmlspecialchars($post['first_name']);
-                                                } elseif (!empty($post['last_name'])) {
+                                                } elseif (!empty($post['last_name'])) { 
                                                     $authorDisplayName = htmlspecialchars($post['last_name']);
                                                 }
-                                                echo $authorDisplayName;
+                                                echo $authorDisplayName; 
                                                 ?>
-                                            </td>
+                                            </td> 
                                             <td><?php echo date('d/m/Y', strtotime($post['created_at'])); ?></td>
                                             <td>
                                                 <span class="badge bg-primary me-1">
@@ -281,10 +284,10 @@ $baseUrl = '/posts';
             <?php if ($total_pages > 1): ?>
             <nav aria-label="Page navigation">
               <ul class="pagination justify-content-center mt-2">
-                <li class="page-item<?php if ($page <= 1) echo ' disabled'; ?>">
+                <li class="page-item<?php if ($page <= 1) echo ' disabled'; ?>"> 
                   <a class="page-link" href="?page=<?php echo $page-1; ?><?php echo !empty($search_term) ? '&search=' . htmlspecialchars($search_term) : ''; ?>" tabindex="-1">&laquo;</a>
                 </li>
-                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                <?php for ($i = 1; $i <= $total_pages; $i++): ?> 
                   <li class="page-item<?php if ($i == $page) echo ' active'; ?>">
                     <a class="page-link" href="?page=<?php echo $i; ?><?php echo !empty($search_term) ? '&search=' . htmlspecialchars($search_term) : ''; ?>"><?php echo $i; ?></a>
                   </li>

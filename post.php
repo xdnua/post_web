@@ -106,16 +106,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment'])) {
     }
 }
 
-// Handle comment update
+// Xử lý cập nhật bình luận
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_comment'])) {
     if (!isLoggedIn()) {
-        $error = 'Please login to update comment';
+        $error = 'Vui lòng đăng nhập để cập nhật bình luận';
     } else {
         $comment_id = (int)$_POST['comment_id'];
         $new_content = mysqli_real_escape_string($conn, $_POST['new_content']);
         $user_id = $_SESSION['user_id'];
         
-        // Check if user owns the comment or is admin
+        // Kiểm tra xem người dùng này có phải chủ bình luận hoặc là admin không
         $check_query = "SELECT user_id FROM comments WHERE id = $comment_id";
         $check_result = mysqli_query($conn, $check_query);
         $comment = mysqli_fetch_assoc($check_result);
@@ -126,14 +126,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_comment'])) {
                 header("Location: post.php?id=$post_id");
                 exit();
             } else {
-                $error = 'Failed to update comment';
+                $error = 'Cập nhật bình luận thất bại';
             }
         } else {
-            $error = 'You do not have permission to update this comment';
+            $error = 'Bạn không có quyền cập nhật bình luận này';
         }
     }
 }
-
+// Xử lý tương tác like/dislike
 if (isset($_POST['action']) && isLoggedIn()) {
     $action = $_POST['action'];
     $user_id = (int)$_SESSION['user_id'];
@@ -147,7 +147,8 @@ if (isset($_POST['action']) && isLoggedIn()) {
         // Thêm tương tác mới
         $like_query = "INSERT INTO likes (post_id, user_id, type) VALUES ($post_id, $user_id, '$action')";
         mysqli_query($conn, $like_query);
-
+        // Gửi thông báo nếu là like
+        // Chỉ gửi thông báo nếu người dùng không tự like bài viết của mình
         if ($action === 'like') {
             $receiver_result = mysqli_query($conn, "SELECT user_id FROM posts WHERE id = $post_id LIMIT 1");
             if ($receiver_result && mysqli_num_rows($receiver_result) > 0) {
@@ -164,9 +165,25 @@ if (isset($_POST['action']) && isLoggedIn()) {
                     }
                 }
             }
+        } else if ($action === 'dislike') {
+            $receiver_result = mysqli_query($conn, "SELECT user_id FROM posts WHERE id = $post_id LIMIT 1");
+            if ($receiver_result && mysqli_num_rows($receiver_result) > 0) {
+                $receiver_data = mysqli_fetch_assoc($receiver_result);
+                $receiver_id = (int)$receiver_data['user_id'];
+
+                if ($receiver_id !== $user_id) {
+                    // Kiểm tra thông báo dislike đã tồn tại chưa, nếu chưa thì thêm
+                    $check_notify = "SELECT id FROM notifications WHERE receiver_id = $receiver_id AND sender_id = $user_id AND post_id = $post_id AND type = 'dislike' LIMIT 1";
+                    $result_check = mysqli_query($conn, $check_notify);
+                    if (!$result_check || mysqli_num_rows($result_check) == 0) {
+                        $notify_query = "INSERT INTO notifications (receiver_id, sender_id, post_id, type) VALUES ($receiver_id, $user_id, $post_id, 'dislike')";
+                        mysqli_query($conn, $notify_query);
+                    }
+                }
+            }
         }
     } else if ($action === 'unlike') {
-        // Nếu có hành động hủy like, thì xóa luôn thông báo tương ứng
+        // Nếu có hành động hủy like, cần xóa thông báo like nếu có
         $receiver_result = mysqli_query($conn, "SELECT user_id FROM posts WHERE id = $post_id LIMIT 1");
         if ($receiver_result && mysqli_num_rows($receiver_result) > 0) {
             $receiver_data = mysqli_fetch_assoc($receiver_result);
@@ -174,6 +191,9 @@ if (isset($_POST['action']) && isLoggedIn()) {
             if ($receiver_id !== $user_id) {
                 $delete_notify = "DELETE FROM notifications WHERE receiver_id = $receiver_id AND sender_id = $user_id AND post_id = $post_id AND type = 'like'";
                 mysqli_query($conn, $delete_notify);
+                // Xóa thông báo dislike nếu có hành động hủy dislike
+                $delete_notify_dislike = "DELETE FROM notifications WHERE receiver_id = $receiver_id AND sender_id = $user_id AND post_id = $post_id AND type = 'dislike'";
+                mysqli_query($conn, $delete_notify_dislike);
             }
         }
     }
@@ -183,13 +203,12 @@ if (isset($_POST['action']) && isLoggedIn()) {
 }
 
 // Xử lý xóa bình luận
-// Nếu người dùng gửi form xóa bình luận (POST) và có trường delete_comment
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_comment'])) {
     if (!isLoggedIn()) {
-        $error = 'Vui lòng đăng nhập để xóa bình luận'; // Nếu chưa đăng nhập thì báo lỗi
+        $error = 'Vui lòng đăng nhập để xóa bình luận'; 
     } else {
-        $comment_id = (int)$_POST['delete_comment']; // Lấy id bình luận cần xóa
-        $user_id = $_SESSION['user_id']; // Lấy id người dùng hiện tại
+        $comment_id = (int)$_POST['delete_comment']; 
+        $user_id = $_SESSION['user_id']; 
         // Kiểm tra xem người dùng này có phải chủ bình luận hoặc là admin không
         $check_query = "SELECT user_id FROM comments WHERE id = $comment_id";
         $check_result = mysqli_query($conn, $check_query);
@@ -200,10 +219,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_comment'])) {
                 header("Location: post.php?id=$post_id");
                 exit();
             } else {
-                $error = 'Failed to delete comment';
+                $error = 'Xóa bình luận thất bại';
             }
         } else {
-            $error = 'You do not have permission to delete this comment';
+            $error = 'Bạn không có quyền xóa bình luận này';
         }
     }
 }
@@ -218,34 +237,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_post'])) {
         $new_topic_id = $_POST['topic_id'] ?? null; // Lấy topic_id (chủ đề) được chọn từ form chỉnh sửa bài viết
 
         // Kiểm tra hợp lệ cho topic_id mới
-        $valid_topic_id = null; // Biến này sẽ lưu topic_id hợp lệ (nếu có)
+        $valid_topic_id = null; 
         if ($new_topic_id !== null && $new_topic_id !== '') {
-            $new_topic_id = (int)$new_topic_id; // Ép kiểu về số nguyên để tránh lỗi SQL injection
-            // (Tùy chọn) Kiểm tra xem topic_id này có tồn tại trong bảng topics không
+            $new_topic_id = (int)$new_topic_id; 
             $check_topic_query = "SELECT id FROM topics WHERE id = $new_topic_id";
             $check_topic_result = mysqli_query($conn, $check_topic_query);
             if (mysqli_num_rows($check_topic_result) > 0) {
                 $valid_topic_id = $new_topic_id; // Nếu tồn tại thì gán vào biến hợp lệ
             }
         }
-
-        $user_id = $_SESSION['user_id']; // Lấy id người dùng hiện tại
+    }
+        $user_id = $_SESSION['user_id']; 
         // Kiểm tra quyền: chỉ chủ bài viết hoặc admin mới được cập nhật bài viết
         if ($post['user_id'] == $user_id || isAdmin()) {
             // Thực hiện truy vấn UPDATE, cập nhật title, content, topic_id cho bài viết
-            // Nếu topic_id không hợp lệ thì để NULL (không có chủ đề)
+            
             $update_post_query = "UPDATE posts SET title = '$new_title', content = '$new_content', topic_id = " . ($valid_topic_id === null ? "NULL" : $valid_topic_id) . " WHERE id = $post_id";
 
             if (mysqli_query($conn, $update_post_query)) {
-                // Sau khi cập nhật thành công, chuyển hướng về lại trang bài viết (theo nguyên tắc POST/Redirect/GET)
+
                 header("Location: post.php?id=$post_id");
                 exit();
             } else {
-                $error = 'Cập nhật bài viết thất bại'; // Báo lỗi nếu truy vấn thất bại
+                $error = 'Cập nhật bài viết thất bại'; 
             }
         } else {
-            $error = 'Bạn không có quyền cập nhật bài viết này'; // Báo lỗi nếu không có quyền
-        }
+            $error = 'Bạn không có quyền cập nhật bài viết này'; 
     }
 }
 
@@ -258,14 +275,10 @@ $comments_query = "SELECT c.*, u.username, u.role, u.first_name, u.last_name, u.
                   ORDER BY c.created_at DESC";
 $comments_result = mysqli_query($conn, $comments_query);
 
-// Hàm lấy danh sách trả lời (replies) cho một bình luận cụ thể
-// Tham số:
-//   - $comment_id: id của bình luận gốc
-//   - $limit: số lượng trả lời tối đa muốn lấy (mặc định 5)
-//   - $offset: vị trí bắt đầu lấy (dùng cho phân trang replies)
+// Hàm lấy danh sách trả lời cho một bình luận cụ thể, kèm thông tin người dùng (username, họ tên, avatar, role)
 function getReplies($comment_id, $limit = 5, $offset = 0) {
     global $conn;
-    // Truy vấn lấy các trả lời cho bình luận, kèm thông tin người dùng (username, họ tên, avatar, role)
+    // Truy vấn lấy các trả lời cho bình luận, kèm thông tin người dùng 
     $replies_query = "SELECT c.*, u.username, u.role, u.first_name, u.last_name, u.avatar
                      FROM comments c
                      JOIN users u ON c.user_id = u.id
@@ -275,7 +288,7 @@ function getReplies($comment_id, $limit = 5, $offset = 0) {
     return mysqli_query($conn, $replies_query);
 }
 
-// ====== XỬ LÝ LƯU BÀI VIẾT YÊU THÍCH (BOOKMARK) ======
+//  XỬ LÝ LƯU BÀI VIẾT YÊU THÍCH 
 if (isLoggedIn() && isset($_POST['bookmark_post'])) {
     $user_id = $_SESSION['user_id'];
     // Kiểm tra đã bookmark chưa
@@ -289,26 +302,19 @@ if (isLoggedIn() && isset($_POST['bookmark_post'])) {
     exit();
 }
 
-// ====== GHI NHẬN LỊCH SỬ ĐỌC BÀI VIẾT ======
+// GHI NHẬN LỊCH SỬ ĐỌC BÀI VIẾT 
 if (isLoggedIn()) {
     $user_id = $_SESSION['user_id'];
     // Ghi nhận lịch sử đọc, nếu đã có thì cập nhật thời gian, nếu chưa có thì thêm mới
     $checkHistory = mysqli_query($conn, "SELECT * FROM read_history WHERE user_id = $user_id AND post_id = $post_id");
-    if (mysqli_num_rows($checkHistory) > 0) {
+    if (mysqli_num_rows($checkHistory) > 0) { 
         mysqli_query($conn, "UPDATE read_history SET last_read_at = NOW() WHERE user_id = $user_id AND post_id = $post_id");
     } else {
         mysqli_query($conn, "INSERT INTO read_history (user_id, post_id, last_read_at) VALUES ($user_id, $post_id, NOW())");
     }
 }
 
-// Ghi lại lịch sử đọc bài viết
-if (isLoggedIn() && $post_id) {
-    $user_id = $_SESSION['user_id'];
-    $read_query = "INSERT INTO read_history (user_id, post_id, last_read_at) VALUES ($user_id, $post_id, NOW()) 
-                    ON DUPLICATE KEY UPDATE last_read_at = NOW();";
-    mysqli_query($conn, $read_query);
-}
-
+// Đánh dấu thông báo là đã xem khi người dùng truy cập vào bài viết từ thông báo
 if (isset($_GET['notification_id']) && isLoggedIn()) {
     $notificationId = intval($_GET['notification_id']);
     $userId = $_SESSION['user_id'];
@@ -464,7 +470,6 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
                                 <!-- Replies Section -->
                                 <div id="replies-<?php echo $comment['id']; ?>" class="mt-3 ms-4">
                                     <?php 
-                                    // Giới hạn số lượng trả lời hiển thị mặc định là 5
                                     $reply_limit = 5;
                                     // Gọi hàm getReplies để lấy danh sách trả lời cho bình luận hiện tại (theo id)
                                     $replies = getReplies($comment['id'], $reply_limit);
@@ -684,10 +689,10 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
             var input = document.createElement('input');
             input.setAttribute('type', 'file');
             input.setAttribute('accept', 'image/*');
-            input.click();
-            input.onchange = function() {
-                var file = input.files[0];
-                if (file) {
+            input.click(); 
+            input.onchange = function() { 
+                var file = input.files[0]; 
+                if (file) { 
                     uploadImageToServerEditPost(file, function(url) {
                         var range = quillEditPost.getSelection();
                         quillEditPost.insertEmbed(range.index, 'image', url);
@@ -716,8 +721,6 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
             xhr.send(formData);
         }
         // Hàm xử lý khi submit form chỉnh sửa bài viết:
-        // - Lấy nội dung từ Quill, loại bỏ ảnh base64, gán vào input ẩn
-        // - Đảm bảo topic_id cũng được gửi đi
         function submitEditPostQuill() {
             var html = quillEditPost.root.innerHTML.replace(/<img[^>]+src=["']data:image\/(png|jpeg|jpg|gif|webp);base64,[^"']+["'][^>]*>/gi, '');
             document.getElementById('hidden_new_content').value = html;

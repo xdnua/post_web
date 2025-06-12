@@ -150,8 +150,8 @@ $result = mysqli_query($conn, $query); // Thực thi truy vấn lấy bài viế
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     function confirmDeletePost(postId) {
-        if (confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
-            document.getElementById('delete_post_id').value = postId;
+        if (confirm('Bạn có chắc chắn muốn xóa bài viết này?')) { 
+            document.getElementById('delete_post_id').value = postId; 
             document.getElementById('deletePostForm').submit();
         }
     }

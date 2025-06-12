@@ -2,7 +2,7 @@
 // Kiểm tra session, nếu chưa có thì khởi tạo
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once 'config/database.php'; // Kết nối tới cơ sở dữ liệu
-require_once 'auth/auth.php'; // Nạp các hàm xác thực tài khoản
+require_once 'auth/auth.php'; // Kiểm tra xác thực tài khoản
 $baseUrl = '/posts'; // Đường dẫn gốc của dự án (cần chỉnh lại nếu đổi tên thư mục)
 
 // Nếu chưa đăng nhập thì chuyển hướng về trang đăng nhập
@@ -13,7 +13,7 @@ if (!isLoggedIn()) {
 
 $user_id = $_SESSION['user_id']; // Lấy id người dùng hiện tại từ session
 
-// Lấy thông tin user từ database (dùng prepared statement để tránh SQL injection)
+// Lấy thông tin user từ database 
 $sql = "SELECT username, first_name, last_name, avatar FROM users WHERE id = ?";
 $stmt = mysqli_prepare($conn, $sql);
 mysqli_stmt_bind_param($stmt, 'i', $user_id);
@@ -24,9 +24,9 @@ mysqli_stmt_close($stmt);
 
 // Xử lý khi người dùng gửi form cập nhật thông tin
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $first_name = trim($_POST['first_name']); // Lấy tên mới từ form
-    $last_name = trim($_POST['last_name']);   // Lấy họ mới từ form
-    $avatar = $user['avatar']; // Mặc định giữ nguyên avatar cũ
+    $first_name = trim($_POST['first_name']); 
+    $last_name = trim($_POST['last_name']);  
+    $avatar = $user['avatar']; 
 
     // Xử lý upload ảnh đại diện nếu có chọn file
     if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] == 0) {
@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($update_stmt) {
             mysqli_stmt_bind_param($update_stmt, 'sssi', $first_name, $last_name, $avatar, $user_id);
             if (mysqli_stmt_execute($update_stmt)) {
-                // Thành công: chuyển hướng lại trang profile (theo nguyên tắc POST/Redirect/GET)
+                // Thành công: chuyển hướng lại trang profile 
                 $_SESSION['success_message'] = $_SESSION['success_message'] ?? 'Cập nhật thông tin tài khoản thành công!';
                 header('Location: ' . $baseUrl . '/profile.php');
                 exit();
@@ -208,12 +208,13 @@ unset($_SESSION['success_message']);
 <?php include 'footer.php'; ?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // Xử lý sự kiện khi người dùng chọn ảnh đại diện mới
     document.getElementById('avatar').addEventListener('change', function(event) {
         const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.querySelector('.avatar-container img').src = e.target.result;
+        if (file) { // Kiểm tra nếu có file được chọn
+            const reader = new FileReader(); // Tạo đối tượng FileReader để đọc file
+            reader.onload = function(e) { // Khi đọc file thành công
+                document.querySelector('.avatar-container img').src = e.target.result; // Cập nhật src của ảnh đại diện
             }
             reader.readAsDataURL(file);
         }

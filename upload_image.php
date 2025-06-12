@@ -5,7 +5,7 @@ if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
     echo json_encode(['error' => 'Không nhận được file ảnh']);
     exit;
 }
-
+// Kiểm tra kích thước file (tối đa 5MB)
 $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
 if (!in_array($ext, $allowed)) {

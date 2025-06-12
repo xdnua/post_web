@@ -25,7 +25,7 @@
                 <h5>Điều hướng trang web</h5>
                 <ul class="list-unstyled">
                 <li><a href="<?=$baseUrl?>/index.php" class="text-light text-decoration-none"><i class="bi bi-house-door"></i> Trang chủ</a></li>
-                <?php if (isLoggedIn()): ?>
+                <?php if (isLoggedIn()): ?> 
                     <li><a href="<?=$baseUrl?>/my_posts.php" class="text-light text-decoration-none"><i class="bi bi-journal-text"></i> Bài đăng của tôi</a></li>
                     <li><a href="<?=$baseUrl?>/create_post.php" class="text-light text-decoration-none"><i class="bi bi-plus-square"></i> Đăng bài mới</a></li>
                     <?php if (isAdmin()): ?>
@@ -52,19 +52,19 @@
     <i class="bi bi-arrow-up"></i>
 </a>
 <script>
-// Back to top button functionality
-var backToTopButton = document.getElementById('back-to-top');
-
+// Hiệu ứng cuộn lên đầu trang
+var backToTopButton = document.getElementById('back-to-top'); // Nút cuộn lên đầu trang
+// Hiển thị nút khi cuộn xuống 100px
 window.addEventListener('scroll', function() {
-    if (window.scrollY > 100) {
-        backToTopButton.style.display = 'block';
-    } else {
+    if (window.scrollY > 100) {  // Kiểm tra vị trí cuộn, nếu cuộn xuống quá 100px
+        backToTopButton.style.display = 'block'; // Hiển thị nút
+    } else { // Ẩn nút khi ở đầu trang
         backToTopButton.style.display = 'none';
     }
 });
 
-backToTopButton.addEventListener('click', function(event) {
-    event.preventDefault();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+backToTopButton.addEventListener('click', function(event) { // Xử lý sự kiện click vào nút cuộn lên đầu trang
+    event.preventDefault(); // Ngăn chặn hành động mặc định của nút
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Cuộn mượt mà lên đầu trang
 });
 </script> 

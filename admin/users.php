@@ -56,9 +56,9 @@ if (!empty($search_term)) {
 
 // Đếm tổng số người dùng (có áp dụng tìm kiếm nếu có)
 $count_query = "SELECT COUNT(*) as total FROM users" . $search_condition;
-$count_result = mysqli_query($conn, $count_query);
-$total_users = mysqli_fetch_assoc($count_result)['total'];
-$total_pages = ceil($total_users / $limit);
+$count_result = mysqli_query($conn, $count_query); // Thực hiện truy vấn đếm tổng số người dùng
+$total_users = mysqli_fetch_assoc($count_result)['total']; // Lấy tổng số người dùng từ truy vấn đếm
+$total_pages = ceil($total_users / $limit); // Tính tổng số trang dựa trên tổng số người dùng và giới hạn mỗi trang
 
 // Lấy danh sách người dùng cho trang hiện tại (có áp dụng tìm kiếm nếu có)
 $query = "SELECT id, username, email, role, created_at, first_name, last_name, avatar FROM users" . $search_condition . " ORDER BY created_at DESC LIMIT $limit OFFSET $offset";
@@ -177,7 +177,7 @@ $baseUrl = '/posts';
                         <div class="input-group">
                             <input type="text" class="form-control" name="search" placeholder="Tìm kiếm người dùng..." value="<?php echo htmlspecialchars($search_term); ?>">
                             <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Tìm kiếm</button>
-                            <?php if (!empty($search_term)): ?>
+                            <?php if (!empty($search_term)): ?> <!-- Hiển thị nút hủy tìm kiếm nếu có từ khóa tìm kiếm -->
                                 <a href="admin/users.php" class="btn btn-secondary">Hủy tìm kiếm</a>
                             <?php endif; ?>
                         </div>

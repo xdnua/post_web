@@ -26,13 +26,15 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 <li class="nav-item">
                     <a class="nav-link <?php if($currentPage == 'about.php') echo 'active-nav-link'; ?>" href="<?=$baseUrl?>/about.php">Giới thiệu</a>
                 </li>
-                
+    
                 <?php if (isLoggedIn()): ?>
                     <?php
-                    $loggedInUserId = $_SESSION['user_id'];
+                    $loggedInUserId = $_SESSION['user_id']; 
                     $userSql = "SELECT username, first_name, last_name, avatar FROM users WHERE id = ? LIMIT 1";
                     $userStmt = mysqli_prepare($conn, $userSql);
                     $loggedInUser = null;
+                    // Lấy thông tin người dùng đang đăng nhập
+
                     if ($userStmt) {
                         mysqli_stmt_bind_param($userStmt, 'i', $loggedInUserId);
                         mysqli_stmt_execute($userStmt);
@@ -73,7 +75,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <ul class="navbar-nav mb-2 mb-lg-0">
                 <?php if (isLoggedIn()): ?>
                     <?php 
-                       function getLatestNotifications($conn, $receiverId, $limit = 5) {
+                       function getLatestNotifications($conn, $receiverId, $limit = 5) { // Hàm lấy thông báo mới nhất của người dùng
                         $sql = "
                             SELECT n.*, u.username, u.avatar, p.title 
                             FROM notifications n
@@ -85,11 +87,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                         ";
 
                         $notifications = [];
-
+                        
                         if ($stmt = mysqli_prepare($conn, $sql)) {
                             mysqli_stmt_bind_param($stmt, 'ii', $receiverId, $limit);
                             mysqli_stmt_execute($stmt);
-
+                        
                             $result = mysqli_stmt_get_result($stmt);
                             if ($result) {
                                 while ($row = mysqli_fetch_assoc($result)) {
@@ -105,7 +107,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                         return $notifications;
                         }
 
-                        // Gọi sử dụng
+                        // Lấy thông tin thông báo mới nhất của người dùng đang đăng nhập
                         $notifications = getLatestNotifications($conn, $loggedInUserId);  
                     ?>
                     <!-- Thông báo -->
@@ -113,7 +115,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                         <a class="nav-link dropdown-toggle position-relative" href="#" id="notificationDropdown" data-bs-toggle="dropdown">
                             <i class="bi bi-bell"></i>
                             <?php
-                            $unseenCount = array_reduce($notifications, fn($c, $n) => $c + ($n['seen'] == 0 ? 1 : 0), 0);
+                            $unseenCount = array_reduce($notifications, fn($c, $n) => $c + ($n['seen'] == 0 ? 1 : 0), 0); // Đếm số thông báo chưa xem
                             if ($unseenCount > 0): ?>
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"><?=$unseenCount?></span>
                             <?php endif; ?>
@@ -130,7 +132,17 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                                             <div style="flex: 1;">
                                                 <div>
                                                     <strong><?=htmlspecialchars($noti['username'])?></strong>
-                                                    <?=($noti['type'] == 'like') ? 'đã bày tỏ cảm xúc về bài viết của bạn' : 'đã bình luận bài viết của bạn'?>
+                                                    <?php
+                                                        if (trim($noti['type']) == 'like') {
+                                                            echo 'đã thích bài viết của bạn';
+                                                        } elseif (trim($noti['type']) == 'dislike') {
+                                                            echo 'không thích bài viết của bạn';
+                                                        } elseif (trim($noti['type']) == 'comment') {
+                                                            echo 'đã bình luận bài viết của bạn';
+                                                        } else {
+                                                            echo 'có hoạt động mới trên bài viết của bạn';
+                                                        }
+                                                    ?>
                                                 </div>
                                                 <small class="text-muted"><?=date('d/m/Y H:i', strtotime($noti['created_at']))?></small>
                                             </div>

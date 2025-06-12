@@ -8,13 +8,13 @@ requireAdmin();
 // Khai báo biến để lưu thông tin lỗi và thành công
 $error = '';
 $success = '';
-$edit_topic = null;
+$edit_topic = null; 
 
 // Xử lý thêm chủ đề mới
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_topic'])) {
-    $topic_name = trim($_POST['topic_name']);
-    if (!empty($topic_name)) {
-        $escaped_name = mysqli_real_escape_string($conn, $topic_name);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_topic'])) { 
+    $topic_name = trim($_POST['topic_name']); 
+    if (!empty($topic_name)) { 
+        $escaped_name = mysqli_real_escape_string($conn, $topic_name); 
         $query = "INSERT INTO topics (name) VALUES ('$escaped_name')";
         if (mysqli_query($conn, $query)) {
             $success = 'Thêm chủ đề thành công!';
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_topic_id'])) {
     // Nếu xóa chủ đề, cập nhật các bài đăng liên quan về NULL
     $update_posts_query = "UPDATE posts SET topic_id = NULL WHERE topic_id = $topic_id";
     mysqli_query($conn, $update_posts_query);
-    
+    // Sau đó xóa chủ đề
     $query = "DELETE FROM topics WHERE id = $topic_id";
     if (mysqli_query($conn, $query)) {
         $success = 'Xóa chủ đề thành công!';
@@ -59,6 +59,8 @@ if (isset($_GET['edit'])) {
 }
 
 // Xử lý cập nhật chủ đề
+// Lưu ý: Cần kiểm tra xem người dùng có quyền sửa chủ đề hay không
+// Nếu không có quyền, chuyển hướng về trang chủ đề
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_topic'])) {
     $topic_id = (int)$_POST['topic_id'];
     $new_name = trim($_POST['new_topic_name']);
@@ -187,12 +189,10 @@ $baseUrl = '/posts';
         <!-- Page Content - Nội dung trang -->
         <div id="content">
             <?php if ($error): ?>
-                <!-- Hiển thị thông báo lỗi nếu có -->
                 <div class="alert alert-danger"><?php echo $error; ?></div>
             <?php endif; ?>
             
             <?php if ($success): ?>
-                <!-- Hiển thị thông báo thành công nếu có -->
                 <div class="alert alert-success"><?php echo $success; ?></div>
             <?php endif; ?>
 
@@ -311,17 +311,17 @@ $baseUrl = '/posts';
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        var editTopicModal = document.getElementById('editTopicModal');
-        editTopicModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget;
-            var topicId = button.getAttribute('data-id');
-            var topicName = button.getAttribute('data-name');
+        var editTopicModal = document.getElementById('editTopicModal');  // Lấy modal chỉnh sửa chủ đề
+        editTopicModal.addEventListener('show.bs.modal', function (event) { // Khi modal được mở
+            var button = event.relatedTarget; // Nút kích hoạt modal
+            var topicId = button.getAttribute('data-id'); // Lấy ID chủ đề từ thuộc tính data-id
+            var topicName = button.getAttribute('data-name'); // Lấy tên chủ đề từ thuộc tính data-name
             
-            var modalTopicId = editTopicModal.querySelector('#edit-topic-id');
-            var modalTopicNameInput = editTopicModal.querySelector('#edit-topic-name');
+            var modalTopicId = editTopicModal.querySelector('#edit-topic-id'); // Lấy input ẩn chứa ID chủ đề
+            var modalTopicNameInput = editTopicModal.querySelector('#edit-topic-name'); // Lấy input chứa tên chủ đề
             
-            modalTopicId.value = topicId;
-            modalTopicNameInput.value = topicName;
+            modalTopicId.value = topicId; // Cập nhật giá trị ID chủ đề vào input ẩn
+            modalTopicNameInput.value = topicName; // Cập nhật giá trị tên chủ đề vào input
         });
     </script>
 </body>

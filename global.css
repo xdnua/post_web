@@ -17,7 +17,7 @@
 }
 
 .navbar-custom .nav-link.active-nav-link {
-    border: 1px solid white; /* Add border to active link */
+    border: 1px solid white; 
 }
 
 .navbar-custom .nav-link.text-danger {

@@ -1,8 +1,6 @@
 <?php
-// Kết nối tới cơ sở dữ liệu
-require_once 'config/database.php';
-// Kiểm tra đăng nhập, xác thực người dùng
-require_once 'auth/auth.php';
+require_once 'config/database.php';// Kết nối tới cơ sở dữ liệu
+require_once 'auth/auth.php';// Kiểm tra đăng nhập, xác thực người dùng
 // Thiết lập đường dẫn cơ sở cho các liên kết trong giao diện
 $baseUrl = '/posts'; 
 ?>

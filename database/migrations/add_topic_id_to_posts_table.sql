@@ -1,4 +1,4 @@
--- Add topic_id column to posts table
+-- Thêm cột topic_id vào bảng posts và tạo khóa ngoại
 ALTER TABLE posts
 ADD COLUMN topic_id INT(11) NULL,
 ADD CONSTRAINT fk_posts_topic_id

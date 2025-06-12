@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (register($username, $password, $email)) {
                 // Đăng ký thành công, hiển thị thông báo màu xanh lá nổi bật ngay bên dưới form, sau 100ms chuyển sang đăng nhập
                 $success = 'Đăng ký thành công! Đang chuyển sang trang đăng nhập...';
-                echo '<script>setTimeout(function(){ window.location.href = "login.php?registered=1"; }, 100);</script>';
+                echo '<script>setTimeout(function(){ window.location.href = "login.php?registered=1"; }, 100);</script>'; // in ra thông báo và chuyển hướng sau 100ms
             } else {
                 $error = 'Đăng ký thất bại. Vui lòng thử lại.';
             }
