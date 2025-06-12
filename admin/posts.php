@@ -15,7 +15,7 @@ if (isset($_POST['delete_post'])) {
     $post_id = (int)$_POST['delete_post']; // Chuyển đổi ID bài đăng sang kiểu số nguyên
     // Lấy nội dung bài đăng để xóa bài đăng liên quan
     $get_content = mysqli_query($conn, "SELECT content FROM posts WHERE id = $post_id");
-    $row = mysqli_fetch_assoc($get_content); // lấy nội dung bài viết để xóa ảnh liên quan
+    $row = mysqli_fetch_assoc($get_content); 
     // Nếu bài đăng tồn tại và có nội dung
     if ($row && !empty($row['content'])) {
         // Tìm tất cả các đường dẫn ảnh trong nội dung bài viết

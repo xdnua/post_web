@@ -16,9 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_topic'])) {
     if (!empty($topic_name)) { 
         $escaped_name = mysqli_real_escape_string($conn, $topic_name); 
         $query = "INSERT INTO topics (name) VALUES ('$escaped_name')";
-        if (mysqli_query($conn, $query)) {
+        if (mysqli_query($conn, $query)) { 
             $success = 'Thêm chủ đề thành công!';
-        } else {
+        } else { 
             $error = 'Lỗi: Không thể thêm chủ đề. Tên chủ đề có thể đã tồn tại.';
         }
     } else {
@@ -59,8 +59,6 @@ if (isset($_GET['edit'])) {
 }
 
 // Xử lý cập nhật chủ đề
-// Lưu ý: Cần kiểm tra xem người dùng có quyền sửa chủ đề hay không
-// Nếu không có quyền, chuyển hướng về trang chủ đề
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_topic'])) {
     $topic_id = (int)$_POST['topic_id'];
     $new_name = trim($_POST['new_topic_name']);
@@ -81,7 +79,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_topic'])) {
 }
 
 // Lấy danh sách tất cả chủ đề để hiển thị
-// Sửa lại truy vấn để sắp xếp theo ID tăng dần (mới thêm sẽ ở cuối danh sách)
 $topics_query = "SELECT * FROM topics ORDER BY id ASC";
 $topics_result = mysqli_query($conn, $topics_query);
 
