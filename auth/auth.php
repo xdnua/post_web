@@ -42,7 +42,7 @@ function requireAdmin() {
 
 // Xử lý đăng nhập: kiểm tra username và password, nếu đúng thì lưu thông tin vào session
 function login($username, $password) {
-    global $conn;
+    global $conn; // Kết nối đến cơ sở dữ liệu
     
     $username = mysqli_real_escape_string($conn, $username);
     $query = "SELECT id, username, password, role FROM users WHERE username = '$username'";
@@ -50,11 +50,11 @@ function login($username, $password) {
     
     if ($result && mysqli_num_rows($result) > 0) { 
         $user = mysqli_fetch_assoc($result); 
-        if (password_verify($password, $user['password'])) {
+        if (password_verify($password, $user['password'])) { 
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['role'] = $user['role'];
-            return true;
+            return true; 
         }
     }
     return false;

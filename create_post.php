@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Thêm bài viết mới vào database, có thể có hoặc không có chủ đề
         $query = "INSERT INTO posts (user_id, title, content, topic_id) VALUES ($user_id, '$title', '$content', " . ($topic_id === null ? "NULL" : $topic_id) . ")";
         
-        if (mysqli_query($conn, $query)) { 
+        if (mysqli_query($conn, $query)) {  
             $post_id = mysqli_insert_id($conn); 
             // Chuyển hướng sang trang chi tiết bài viết vừa tạo
             header("Location: post.php?id=$post_id");
@@ -150,17 +150,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Hàm upload ảnh lên server khi chèn vào Quill
     function uploadImageToServer(file, callback) {
-        var formData = new FormData();
-        formData.append('image', file);
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', 'upload_image.php', true);
-        xhr.onload = function() {
-            if (xhr.status === 200) {
-                var res = JSON.parse(xhr.responseText);
-                if (res.url) {
+        var formData = new FormData(); // Tạo đối tượng FormData để gửi file ảnh
+        formData.append('image', file); 
+        var xhr = new XMLHttpRequest(); // Tạo đối tượng XMLHttpRequest để gửi yêu cầu AJAX
+        xhr.open('POST', 'upload_image.php', true); // Gửi yêu cầu POST tới file upload_image.php
+        xhr.onload = function() { 
+            if (xhr.status === 200) { // Kiểm tra nếu upload thành công (HTTP 200 OK)
+                var res = JSON.parse(xhr.responseText); 
+                if (res.url) { // Kiểm tra nếu server trả về URL của ảnh
                     callback(res.url); // Trả về link ảnh sau khi upload thành công
-                } else {
-                    alert(res.error || 'Lỗi upload ảnh');
+                } else { 
+                    alert(res.error || 'Lỗi upload ảnh'); 
                 }
             } else {
                 alert('Lỗi upload ảnh');
@@ -171,16 +171,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Xử lý khi người dùng chọn/chèn ảnh vào editor
     function imageHandler() {
-        var input = document.createElement('input');
-        input.setAttribute('type', 'file');
-        input.setAttribute('accept', 'image/*');
-        input.click();
-        input.onchange = function() {
+        var input = document.createElement('input'); // Tạo một input để chọn file ảnh
+        input.setAttribute('type', 'file'); 
+        input.setAttribute('accept', 'image/*'); 
+        input.click(); 
+        input.onchange = function() { 
             var file = input.files[0];
-            if (file) {
+            if (file) { 
                 uploadImageToServer(file, function(url) {
-                    var range = quill.getSelection();
-                    quill.insertEmbed(range.index, 'image', url);
+                    var range = quill.getSelection(); // Lấy vị trí con trỏ hiện tại trong editor
+                    quill.insertEmbed(range.index, 'image', url); // Chèn ảnh vào vị trí con trỏ hiện tại trong editor
                 });
             }
         };
@@ -188,16 +188,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Xử lý paste ảnh từ clipboard vào editor
     quill.root.addEventListener('paste', function(e) {
-        var clipboardData = e.clipboardData || window.clipboardData;
-        if (clipboardData && clipboardData.items) {
-            for (var i = 0; i < clipboardData.items.length; i++) {
-                var item = clipboardData.items[i];
-                if (item.type.indexOf('image') !== -1) {
-                    e.preventDefault();
-                    var file = item.getAsFile();
-                    uploadImageToServer(file, function(url) {
-                        var range = quill.getSelection();
-                        quill.insertEmbed(range.index, 'image', url);
+        var clipboardData = e.clipboardData || window.clipboardData; // lấy dữ liệu clipboard
+        if (clipboardData && clipboardData.items) {  
+            for (var i = 0; i < clipboardData.items.length; i++) {  // Duyệt qua các mục trong clipboard
+                var item = clipboardData.items[i]; 
+                if (item.type.indexOf('image') !== -1) { 
+                    e.preventDefault(); 
+                    var file = item.getAsFile(); 
+                    uploadImageToServer(file, function(url) { // Gọi hàm upload ảnh lên server
+                        var range = quill.getSelection(); // Lấy vị trí con trỏ hiện tại trong editor
+                        quill.insertEmbed(range.index, 'image', url); 
                     });
                 }
             }
@@ -207,9 +207,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     quill.root.addEventListener('drop', function(e) {
         if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
             e.preventDefault();
-            var file = e.dataTransfer.files[0];
-            if (file && file.type.indexOf('image') !== -1) {
-                uploadImageToServer(file, function(url) {
+            var file = e.dataTransfer.files[0]; 
+            if (file && file.type.indexOf('image') !== -1) { 
+                uploadImageToServer(file, function(url) { 
                     var range = quill.getSelection();
                     quill.insertEmbed(range.index, 'image', url);
                 });

@@ -2,7 +2,7 @@
 require_once 'config/database.php'; // Kết nối tới cơ sở dữ liệu
 require_once 'auth/auth.php'; // Các hàm xác thực tài khoản
 
-$post_id = $_GET['id'] ?? 0;
+$post_id = $_GET['id'] ?? 0; // Lấy ID bài viết từ URL, mặc định là 0 nếu không có
 $error = '';
 $success = '';
 
@@ -56,7 +56,7 @@ $post_query = "SELECT p.*, u.username, u.first_name, u.last_name, u.avatar,
                JOIN users u ON p.user_id = u.id
                WHERE p.id = $post_id";
 $post_result = mysqli_query($conn, $post_query);
-$post = mysqli_fetch_assoc($post_result);
+$post = mysqli_fetch_assoc($post_result); 
 
 if (!$post) {
     // Nếu không tìm thấy bài viết thì quay về trang chủ

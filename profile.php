@@ -209,14 +209,14 @@ unset($_SESSION['success_message']);
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     // Xử lý sự kiện khi người dùng chọn ảnh đại diện mới
-    document.getElementById('avatar').addEventListener('change', function(event) {
-        const file = event.target.files[0];
+    document.getElementById('avatar').addEventListener('change', function(event) { 
+        const file = event.target.files[0]; // Lấy file được chọn từ input
         if (file) { // Kiểm tra nếu có file được chọn
             const reader = new FileReader(); // Tạo đối tượng FileReader để đọc file
             reader.onload = function(e) { // Khi đọc file thành công
                 document.querySelector('.avatar-container img').src = e.target.result; // Cập nhật src của ảnh đại diện
             }
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(file); // Đọc file dưới dạng Data URL
         }
     });
 </script>

@@ -44,8 +44,8 @@ if ($topics_result) { // Nếu truy vấn thành công
     // Đảm bảo reset con trỏ và lấy lại dữ liệu từ đầu
     mysqli_data_seek($topics_result, 0);
     while ($row = mysqli_fetch_row($topics_result)) { // Duyệt qua từng hàng kết quả
-        $topics[] = [
-            'id' => $row[0],
+        $topics[] = [ 
+            'id' => $row[0], 
             'name' => $row[1]
         ];
     }
@@ -81,7 +81,7 @@ if ($stmt_count) {
         mysqli_stmt_bind_param($stmt_count, $param_types, ...$param_values);
      }
     mysqli_stmt_execute($stmt_count);
-    $count_result = mysqli_stmt_get_result($stmt_count);
+    $count_result = mysqli_stmt_get_result($stmt_count); // Lấy kết quả đếm bài viết
     $total_posts = mysqli_fetch_assoc($count_result)['total']; // Tổng số bài viết
     $total_pages = ceil($total_posts / $limit); // Tổng số trang
     mysqli_stmt_close($stmt_count);
