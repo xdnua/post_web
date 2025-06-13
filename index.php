@@ -20,7 +20,9 @@ if (!empty($search_term)) {
     $conditions[] = " (p.title LIKE ? OR p.content LIKE ?) "; // Tìm trong tiêu đề hoặc nội dung
     $param_values[] = '%' . $search_term . '%';
     $param_types .= 'ss'; // 2 tham số kiểu string (title, content) để tìm kiếm
+    $param_values[] = '%' . $search_term . '%';
 }
+
 
 // Nếu có lọc theo chủ đề, thêm điều kiện chủ đề vào truy vấn
 if ($topic_id !== null) {

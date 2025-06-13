@@ -3,7 +3,7 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once 'config/database.php'; // Kết nối tới cơ sở dữ liệu
 require_once 'auth/auth.php'; // Kiểm tra xác thực tài khoản
-$baseUrl = '/posts'; // Đường dẫn gốc của dự án (cần chỉnh lại nếu đổi tên thư mục)
+$baseUrl = '/posts'; // Đường dẫn gốc của dự án 
 
 // Nếu chưa đăng nhập thì chuyển hướng về trang đăng nhập
 if (!isLoggedIn()) {
