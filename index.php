@@ -5,130 +5,47 @@ require_once 'auth/auth.php'; // Kiểm tra đăng nhập, xác thực người 
 
 // Xử lý phân trang, tìm kiếm, lọc chủ đề
 
-$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1; // Lấy số trang hiện tại từ URL, mặc định là 1
-$limit = 6; // Số bài viết mỗi trang (chỉ hiện 6 bài viết mới nhất trên trang chủ)
-$offset = ($page - 1) * $limit; // Vị trí bắt đầu lấy dữ liệu
-$search_term = $_GET['search'] ?? ''; // Từ khóa tìm kiếm (nếu có)
-$topic_id = isset($_GET['topic_id']) ? (int)$_GET['topic_id'] : null; // Lọc theo chủ đề (nếu có)
+// Lấy dữ liệu từ URL
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$limit = 6;
+$offset = ($page - 1) * $limit;
+$search_term = trim($_GET['search'] ?? '');
+$topic_id = isset($_GET['topic_id']) ? (int)$_GET['topic_id'] : null;
 
-$conditions = []; // Mảng chứa các điều kiện truy vấn
-$param_values = []; // Mảng chứa các giá trị tham số truy vấn
-$param_types = ''; // Chuỗi kiểu dữ liệu cho các tham số truy vấn
+// Chuẩn bị điều kiện truy vấn
+$conditions = '';
+$param_values = [];
+$param_types = '';
 
-// Nếu có từ khóa tìm kiếm, thêm điều kiện tìm kiếm vào truy vấn
 if (!empty($search_term)) {
-    $conditions[] = " (p.title LIKE ? OR p.content LIKE ?) "; // Tìm trong tiêu đề hoặc nội dung
-    $param_values[] = '%' . $search_term . '%';
-    $param_types .= 'ss'; // 2 tham số kiểu string (title, content) để tìm kiếm
-    $param_values[] = '%' . $search_term . '%';
+    $escaped_search_term = mysqli_real_escape_string($conn, $search_term);
+    $conditions = " WHERE (p.title LIKE '%$escaped_search_term%' OR p.content LIKE '%$escaped_search_term%' OR t.name LIKE '%$escaped_search_term%')";
 }
 
+// Count total posts (with search)
+$count_query = "SELECT COUNT(*) as total FROM posts p LEFT JOIN topics t ON p.topic_id = t.id" . $conditions;
+$count_result = mysqli_query($conn, $count_query);
+$total_posts = mysqli_fetch_assoc($count_result)['total'];
+$total_pages = ceil($total_posts / $limit);
 
-// Nếu có lọc theo chủ đề, thêm điều kiện chủ đề vào truy vấn
-if ($topic_id !== null) {
-    $conditions[] = " p.topic_id = ? ";
-    $param_values[] = $topic_id;
-    $param_types .= 'i'; // 1 tham số kiểu int để lọc theo chủ đề
-}
+// Get posts for current page with user information (with search)
+$query = "SELECT p.*, u.username, t.name as topic_name,
+          (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'like') as like_count,
+          (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'dislike') as dislike_count,
+          (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count
+          FROM posts p 
+          JOIN users u ON p.user_id = u.id 
+          LEFT JOIN topics t ON p.topic_id = t.id";
 
-// Ghép các điều kiện thành chuỗi WHERE
-$where_clause = '';
 if (!empty($conditions)) {
-    $where_clause = " WHERE " . implode(" AND ", $conditions);
-}
-
-
-// Lấy danh sách chủ đề để hiển thị tab chủ đề
-$topics_query = "SELECT id, name FROM topics ORDER BY id ASC";
-$topics_result = mysqli_query($conn, $topics_query);
-$topics = [];
-if ($topics_result) { // Nếu truy vấn thành công
-    // Đảm bảo reset con trỏ và lấy lại dữ liệu từ đầu
-    mysqli_data_seek($topics_result, 0);
-    while ($row = mysqli_fetch_row($topics_result)) { // Duyệt qua từng hàng kết quả
-        $topics[] = [ 
-            'id' => $row[0], 
-            'name' => $row[1]
-        ];
-    }
-}
-
-// Nếu có chọn chủ đề, lấy tên chủ đề để hiển thị
-$selected_topic_name = '';
-if ($topic_id !== null) {
-    $topic_name_query = "SELECT name FROM topics WHERE id = ? LIMIT 1";
-    $stmt_topic = mysqli_prepare($conn, $topic_name_query);
-     if ($stmt_topic) { // Nếu truy vấn thành công
-        mysqli_stmt_bind_param($stmt_topic, 'i', $topic_id); // Liên kết tham số với kiểu dữ liệu là int
-        mysqli_stmt_execute($stmt_topic); // Thực thi truy vấn
-        $topic_name_result = mysqli_stmt_get_result($stmt_topic); // Lấy kết quả truy vấn
-        $topic_name_row = mysqli_fetch_assoc($topic_name_result); // Lấy tên chủ đề
-        if ($topic_name_row) { // Nếu có kết quả
-            $selected_topic_name = $topic_name_row['name']; // Lưu tên chủ đề đã chọn
-        }
-        mysqli_stmt_close($stmt_topic); // Đóng câu lệnh đã chuẩn bị
-     } else {
-        // Nếu lỗi truy vấn
-        $error = 'Lỗi CSDL khi lấy tên chủ đề.';
-     }
-}
-
-
-// Đếm tổng số bài viết (phục vụ phân trang)
-$count_query_sql = "SELECT COUNT(*) as total FROM posts p" . $where_clause;
-$stmt_count = mysqli_prepare($conn, $count_query_sql);
-
-if ($stmt_count) {
-     if (!empty($param_values)) {
-        mysqli_stmt_bind_param($stmt_count, $param_types, ...$param_values);
-     }
-    mysqli_stmt_execute($stmt_count);
-    $count_result = mysqli_stmt_get_result($stmt_count); // Lấy kết quả đếm bài viết
-    $total_posts = mysqli_fetch_assoc($count_result)['total']; // Tổng số bài viết
-    $total_pages = ceil($total_posts / $limit); // Tổng số trang
-    mysqli_stmt_close($stmt_count);
+    $query .= $conditions;
 } else {
-     // Nếu lỗi truy vấn
-     $error = 'Lỗi CSDL khi đếm bài viết.';
-     $total_posts = 0;
-     $total_pages = 0;
+    $query .= ' WHERE 1=1';
 }
 
+$query .= " ORDER BY p.created_at DESC LIMIT $limit OFFSET $offset";
 
-// Lấy danh sách bài viết cho trang hiện tại (có áp dụng tìm kiếm, lọc chủ đề, phân trang)
-$query_sql = "SELECT p.*, u.username, u.first_name, u.last_name, u.avatar,
-        (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'like') as like_count,
-        (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'dislike') as dislike_count
-        FROM posts p
-        JOIN users u ON p.user_id = u.id ";
-
-$query_sql .= $where_clause; // Thêm điều kiện WHERE nếu có
-
-$query_sql .= " ORDER BY p.created_at DESC LIMIT ? OFFSET ?"; // Sắp xếp mới nhất, phân trang
-
-$stmt = mysqli_prepare($conn, $query_sql);
-
-if ($stmt) {
-     // Tạo mảng tham số và kiểu dữ liệu cho truy vấn chính (bao gồm limit, offset)
-     $main_query_param_values = $param_values; // Bắt đầu với các giá trị filter
-     $main_query_param_types = $param_types;
-
-     // Thêm kiểu và giá trị cho limit, offset
-     $main_query_param_types .= 'ii';
-     $main_query_param_values[] = $limit;
-     $main_query_param_values[] = $offset;
-
-    mysqli_stmt_bind_param($stmt, $main_query_param_types, ...$main_query_param_values);
-
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt); // Kết quả danh sách bài viết
-    mysqli_stmt_close($stmt);
-} else {
-     // Nếu lỗi truy vấn
-    $error = 'Lỗi CSDL khi lấy danh sách bài viết.';
-    $result = false; // Không có kết quả
-}
-
+$result = mysqli_query($conn, $query);
 $baseUrl = '/posts'; 
 ?>
 <!DOCTYPE html>
@@ -163,6 +80,16 @@ $baseUrl = '/posts';
                         <div class="input-group input-group-lg rounded-pill shadow-sm overflow-hidden" style="max-width: 600px; border: 1px solid white;">
                             <span class="input-group-text border-0"><i class="bi bi-search"></i></span>
                             <input type="text" class="form-control border-0 ps-1" name="search" placeholder="Tìm kiếm ..." value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
+                            <?php if (!empty($topics)): ?>
+                                <select name="topic_id" class="form-select border-0" style="max-width: 200px;">
+                                    <option value="">Tất cả chủ đề</option>
+                                    <?php foreach ($topics as $topic): ?>
+                                        <option value="<?php echo $topic['id']; ?>" <?php echo (isset($_GET['topic_id']) && $_GET['topic_id'] == $topic['id']) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($topic['name'], ENT_QUOTES, 'UTF-8'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php endif; ?>
                             <button class="btn btn-primary text-white px-4 border-0" type="submit" style="border: none !important;">Tìm kiếm</button>
                         </div>
                     </form>
@@ -207,12 +134,12 @@ $baseUrl = '/posts';
     <!-- Chu de -->
     <section class="topics-section py-5">
         <div class="container">
-            <h2 class="text-center mb-4" id="topics-section">Chủ Đề</h2>
+            <h2 class="text-center mb-4" id="topics-section">Bài viết mới nhất</h2>
 
             <!-- Topic Tabs -->
             <div style="overflow-x: auto; white-space: nowrap; padding-bottom: 15px; -webkit-overflow-scrolling: touch;">
                 <ul class="nav nav-tabs border-0 mb-4" id="topicTabs" role="tablist" style="display: flex; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; max-width: 100vw; min-width: 0; justify-content: flex-start; padding: 0;">
-<?php if (!empty($topics)): ?>
+<!-- <?php if (!empty($topics)): ?>
     <?php /*
         Trả về mặc định: không thêm margin, không gap, không padding hai bên, chỉ giữ min-width cho li để tab không bị bóp méo.
     */ ?>
@@ -223,7 +150,7 @@ $baseUrl = '/posts';
             </button>
         </li>
     <?php endforeach; ?>
-<?php endif; ?>
+<?php endif; ?> -->
             </ul>
             </div>
 
@@ -288,7 +215,7 @@ $baseUrl = '/posts';
                                      </div>
                                  <?php endwhile; ?>
                           <?php elseif (($result && mysqli_num_rows($result) == 0) || ($topics_result && mysqli_num_rows($topics_result) == 0 && empty($search_term) && $topic_id === null)): ?> 
-                                -->
+                              
                               <div class="col-12 text-center">
                                      <div class="alert alert-info text-center mt-3 mb-0 mx-auto gradient-bg text-light" style="max-width: 300px;">
                                          <i class="bi bi-emoji-frown" style="font-size:2rem;"></i><br>
