@@ -1,0 +1,6 @@
+ALTER TABLE posts
+ADD CONSTRAINT fk_posts_topic_id_new
+FOREIGN KEY (topic_id)
+REFERENCES topics(id)
+ON DELETE SET NULL
+ON UPDATE CASCADE;

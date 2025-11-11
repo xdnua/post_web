@@ -1,0 +1,2 @@
+ALTER TABLE posts
+ADD COLUMN topic_name VARCHAR(255) NULL AFTER topic_id,
