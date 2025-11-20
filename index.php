@@ -1,1 +1,1 @@
-<?php include __DIR__ . '/src/views/home/index.php'; ?>
+<?php include __DIR__ . '/src/views/home/home.php'; ?>

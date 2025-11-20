@@ -1,352 +1,25 @@
-<?php
-require_once 'config/database.php'; // Kết nối tới cơ sở dữ liệu
-require_once 'auth/auth.php'; // Các hàm xác thực tài khoản
-
-$post_id = $_GET['id'] ?? 0; // Lấy ID bài viết từ URL, mặc định là 0 nếu không có
-$error = '';
-$success = '';
-
-// Lấy danh sách chủ đề từ database để dùng cho dropdown chỉnh sửa bài viết
-$topics_query = "SELECT id, name FROM topics ORDER BY name ASC";
-$topics_result = mysqli_query($conn, $topics_query);
-$topics = mysqli_fetch_all($topics_result, MYSQLI_ASSOC);
-
-// Xử lý xóa bài viết
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_post'])) {
-    if (!isLoggedIn()) {
-        $error = 'Vui lòng đăng nhập để xóa bài viết';
-    } else {
-        $user_id = $_SESSION['user_id'];
-        // Lấy lại thông tin bài viết để kiểm tra quyền và lấy nội dung
-        $post_query = "SELECT * FROM posts WHERE id = $post_id";
-        $post_result = mysqli_query($conn, $post_query);
-        $post = mysqli_fetch_assoc($post_result); 
-        if ($post && ($post['user_id'] == $user_id || isAdmin())) {
-            // Xóa ảnh trong nội dung bài viết (nếu có)
-            $content = $post['content'];
-            $imgs = [];
-            if (preg_match_all('/src=\"(.*?)\"/', $content, $matches)) {
-                $imgs = $matches[1];
-            }
-            foreach ($imgs as $img_url) {
-                $img_path = $_SERVER['DOCUMENT_ROOT'] . parse_url($img_url, PHP_URL_PATH);
-                if (strpos($img_path, '/uploads/') !== false && file_exists($img_path)) {
-                    @unlink($img_path); // Xóa file ảnh khỏi server
-                }
-            }
-            // Xóa bài viết khỏi database
-            $delete_query = "DELETE FROM posts WHERE id = $post_id";
-            if (mysqli_query($conn, $delete_query)) {
-                header('Location: index.php');
-                exit();
-            } else {
-                $error = 'Xóa bài viết thất bại';
-            }
-        } else {
-            $error = 'Bạn không có quyền xóa bài viết này';
-        }
-    }
-}
-
-// Lấy thông tin chi tiết bài viết (kèm tên, avatar tác giả và số lượt thích/không thích)
-$post_query = "SELECT p.*, u.username, u.first_name, u.last_name, u.avatar,
-               (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'like') as like_count,
-               (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'dislike') as dislike_count
-               FROM posts p
-               JOIN users u ON p.user_id = u.id
-               WHERE p.id = $post_id";
-$post_result = mysqli_query($conn, $post_query);
-$post = mysqli_fetch_assoc($post_result); 
-
-if (!$post) {
-    // Nếu không tìm thấy bài viết thì quay về trang chủ
-    header('Location: index.php');
-    exit();
-}
-
-// Xử lý khi gửi bình luận mới
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment'])) {
-    if (!isLoggedIn()) {
-        $error = 'Vui lòng đăng nhập để bình luận';
-    } else {
-        $comment = mysqli_real_escape_string($conn, $_POST['comment']);
-        $user_id = $_SESSION['user_id'];
-        $parent_id = isset($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
-        
-        $comment_query = "INSERT INTO comments (post_id, user_id, parent_id, content) VALUES ($post_id, $user_id, " . ($parent_id ? $parent_id : "NULL") . ", '$comment')";
-       if (mysqli_query($conn, $comment_query)) {
-            $comment_id = mysqli_insert_id($conn); // Lấy ID của bình luận vừa tạo
-
-            // Xác định người nhận thông báo
-            if ($parent_id) {
-                // Trả lời bình luận => người nhận là chủ bình luận gốc
-                $receiver_query = "SELECT user_id FROM comments WHERE id = $parent_id";
-            } else {
-                // Bình luận mới => người nhận là chủ bài viết
-                $receiver_query = "SELECT user_id FROM posts WHERE id = $post_id";
-            }
-
-            $receiver_result = mysqli_query($conn, $receiver_query);
-            if ($receiver = mysqli_fetch_assoc($receiver_result)) { 
-                $receiver_id = $receiver['user_id'];
-
-                // Không gửi thông báo nếu tự bình luận bài viết của mình
-                if ($receiver_id != $user_id) {
-                    $notify_query = "INSERT INTO notifications (receiver_id, sender_id, post_id, comment_id, type)
-                                     VALUES ($receiver_id, $user_id, $post_id, $comment_id, 'comment')";
-                    mysqli_query($conn, $notify_query);
-                }
-            }
-
-            header("Location: post.php?id=$post_id");
-            exit();
-        } else {
-            $error = 'Thêm bình luận thất bại';
-        }
-    }
-}
-
-// Xử lý cập nhật bình luận
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_comment'])) {
-    if (!isLoggedIn()) {
-        $error = 'Vui lòng đăng nhập để cập nhật bình luận';
-    } else {
-        $comment_id = (int)$_POST['comment_id'];
-        $new_content = mysqli_real_escape_string($conn, $_POST['new_content']);
-        $user_id = $_SESSION['user_id'];
-        
-        // Kiểm tra xem người dùng này có phải chủ bình luận hoặc là admin không
-        $check_query = "SELECT user_id FROM comments WHERE id = $comment_id";
-        $check_result = mysqli_query($conn, $check_query);
-        $comment = mysqli_fetch_assoc($check_result);
-        
-        if ($comment && ($comment['user_id'] == $user_id || isAdmin())) {
-            $update_query = "UPDATE comments SET content = '$new_content' WHERE id = $comment_id";
-            if (mysqli_query($conn, $update_query)) {
-                header("Location: post.php?id=$post_id");
-                exit();
-            } else {
-                $error = 'Cập nhật bình luận thất bại';
-            }
-        } else {
-            $error = 'Bạn không có quyền cập nhật bình luận này';
-        }
-    }
-}
-// Xử lý tương tác like/dislike
-if (isset($_POST['action']) && isLoggedIn()) {
-    $action = $_POST['action'];
-    $user_id = (int)$_SESSION['user_id'];
-    $post_id = (int)$post_id;
-
-    // Xóa tương tác cũ
-    $delete_query = "DELETE FROM likes WHERE post_id = $post_id AND user_id = $user_id";
-    mysqli_query($conn, $delete_query);
-
-    if ($action === 'like' || $action === 'dislike') {
-        // Thêm tương tác mới
-        $like_query = "INSERT INTO likes (post_id, user_id, type) VALUES ($post_id, $user_id, '$action')";
-        mysqli_query($conn, $like_query);
-        // Gửi thông báo nếu là like
-        // Chỉ gửi thông báo nếu người dùng không tự like bài viết của mình
-        if ($action === 'like') {
-            $receiver_result = mysqli_query($conn, "SELECT user_id FROM posts WHERE id = $post_id LIMIT 1");
-            if ($receiver_result && mysqli_num_rows($receiver_result) > 0) {
-                $receiver_data = mysqli_fetch_assoc($receiver_result);
-                $receiver_id = (int)$receiver_data['user_id'];
-
-                if ($receiver_id !== $user_id) {
-                    // Kiểm tra thông báo like đã tồn tại chưa, nếu chưa thì thêm
-                    $check_notify = "SELECT id FROM notifications WHERE receiver_id = $receiver_id AND sender_id = $user_id AND post_id = $post_id AND type = 'like' LIMIT 1";
-                    $result_check = mysqli_query($conn, $check_notify);
-                    if (!$result_check || mysqli_num_rows($result_check) == 0) {
-                        $notify_query = "INSERT INTO notifications (receiver_id, sender_id, post_id, type) VALUES ($receiver_id, $user_id, $post_id, 'like')";
-                        mysqli_query($conn, $notify_query);
-                    }
-                }
-            }
-        } else if ($action === 'dislike') {
-            $receiver_result = mysqli_query($conn, "SELECT user_id FROM posts WHERE id = $post_id LIMIT 1");
-            if ($receiver_result && mysqli_num_rows($receiver_result) > 0) {
-                $receiver_data = mysqli_fetch_assoc($receiver_result);
-                $receiver_id = (int)$receiver_data['user_id'];
-
-                if ($receiver_id !== $user_id) {
-                    // Kiểm tra thông báo dislike đã tồn tại chưa, nếu chưa thì thêm
-                    $check_notify = "SELECT id FROM notifications WHERE receiver_id = $receiver_id AND sender_id = $user_id AND post_id = $post_id AND type = 'dislike' LIMIT 1";
-                    $result_check = mysqli_query($conn, $check_notify);
-                    if (!$result_check || mysqli_num_rows($result_check) == 0) {
-                        $notify_query = "INSERT INTO notifications (receiver_id, sender_id, post_id, type) VALUES ($receiver_id, $user_id, $post_id, 'dislike')";
-                        mysqli_query($conn, $notify_query);
-                    }
-                }
-            }
-        }
-    } else if ($action === 'unlike') {
-        // Nếu có hành động hủy like, cần xóa thông báo like nếu có
-        $receiver_result = mysqli_query($conn, "SELECT user_id FROM posts WHERE id = $post_id LIMIT 1");
-        if ($receiver_result && mysqli_num_rows($receiver_result) > 0) {
-            $receiver_data = mysqli_fetch_assoc($receiver_result);
-            $receiver_id = (int)$receiver_data['user_id'];
-            if ($receiver_id !== $user_id) {
-                $delete_notify = "DELETE FROM notifications WHERE receiver_id = $receiver_id AND sender_id = $user_id AND post_id = $post_id AND type = 'like'";
-                mysqli_query($conn, $delete_notify);
-                // Xóa thông báo dislike nếu có hành động hủy dislike
-                $delete_notify_dislike = "DELETE FROM notifications WHERE receiver_id = $receiver_id AND sender_id = $user_id AND post_id = $post_id AND type = 'dislike'";
-                mysqli_query($conn, $delete_notify_dislike);
-            }
-        }
-    }
-
-    header("Location: post.php?id=$post_id");
-    exit();
-}
-
-// Xử lý xóa bình luận
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_comment'])) {
-    if (!isLoggedIn()) {
-        $error = 'Vui lòng đăng nhập để xóa bình luận'; 
-    } else {
-        $comment_id = (int)$_POST['delete_comment']; 
-        $user_id = $_SESSION['user_id']; 
-        // Kiểm tra xem người dùng này có phải chủ bình luận hoặc là admin không
-        $check_query = "SELECT user_id FROM comments WHERE id = $comment_id";
-        $check_result = mysqli_query($conn, $check_query);
-        $comment = mysqli_fetch_assoc($check_result);
-        if ($comment && ($comment['user_id'] == $user_id || isAdmin())) {
-            $delete_query = "DELETE FROM comments WHERE id = $comment_id";
-            if (mysqli_query($conn, $delete_query)) {
-                header("Location: post.php?id=$post_id");
-                exit();
-            } else {
-                $error = 'Xóa bình luận thất bại';
-            }
-        } else {
-            $error = 'Bạn không có quyền xóa bình luận này';
-        }
-    }
-}
-
-// Xử lý cập nhật bài viết (chỉ chủ bài viết hoặc admin mới được sửa)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_post'])) {
-    if (!isLoggedIn()) {
-        $error = 'Vui lòng đăng nhập để cập nhật bài viết';
-    } else {
-        $new_title = mysqli_real_escape_string($conn, $_POST['new_title']);
-        $new_content = mysqli_real_escape_string($conn, $_POST['new_content']);
-        $new_topic_id = $_POST['topic_id'] ?? null; // Lấy topic_id (chủ đề) được chọn từ form chỉnh sửa bài viết
-
-        // Kiểm tra hợp lệ cho topic_id mới
-        $valid_topic_id = null; 
-        if ($new_topic_id !== null && $new_topic_id !== '') {
-            $new_topic_id = (int)$new_topic_id; 
-            $check_topic_query = "SELECT id FROM topics WHERE id = $new_topic_id";
-            $check_topic_result = mysqli_query($conn, $check_topic_query);
-            if (mysqli_num_rows($check_topic_result) > 0) {
-                $valid_topic_id = $new_topic_id; // Nếu tồn tại thì gán vào biến hợp lệ
-            }
-        }
-    }
-        $user_id = $_SESSION['user_id']; 
-        // Kiểm tra quyền: chỉ chủ bài viết hoặc admin mới được cập nhật bài viết
-        if ($post['user_id'] == $user_id || isAdmin()) {
-            // Thực hiện truy vấn UPDATE, cập nhật title, content, topic_id cho bài viết
-            
-            $update_post_query = "UPDATE posts SET title = '$new_title', content = '$new_content', topic_id = " . ($valid_topic_id === null ? "NULL" : $valid_topic_id) . " WHERE id = $post_id";
-
-            if (mysqli_query($conn, $update_post_query)) {
-
-                header("Location: post.php?id=$post_id");
-                exit();
-            } else {
-                $error = 'Cập nhật bài viết thất bại'; 
-            }
-        } else {
-            $error = 'Bạn không có quyền cập nhật bài viết này'; 
-    }
-}
-
-// Lấy danh sách bình luận gốc (không phải trả lời) của bài viết, kèm thông tin người dùng và số lượng trả lời cho mỗi bình luận
-$comments_query = "SELECT c.*, u.username, u.role, u.first_name, u.last_name, u.avatar,
-                  (SELECT COUNT(*) FROM comments r WHERE r.parent_id = c.id) as reply_count
-                  FROM comments c
-                  JOIN users u ON c.user_id = u.id
-                  WHERE c.post_id = $post_id AND c.parent_id IS NULL
-                  ORDER BY c.created_at DESC";
-$comments_result = mysqli_query($conn, $comments_query);
-
-// Hàm lấy danh sách trả lời cho một bình luận cụ thể, kèm thông tin người dùng (username, họ tên, avatar, role)
-function getReplies($comment_id, $limit = 5, $offset = 0) {
-    global $conn;
-    // Truy vấn lấy các trả lời cho bình luận, kèm thông tin người dùng 
-    $replies_query = "SELECT c.*, u.username, u.role, u.first_name, u.last_name, u.avatar
-                     FROM comments c
-                     JOIN users u ON c.user_id = u.id
-                     WHERE c.parent_id = $comment_id
-                     ORDER BY c.created_at ASC
-                     LIMIT $limit OFFSET $offset";
-    return mysqli_query($conn, $replies_query);
-}
-
-//  XỬ LÝ LƯU BÀI VIẾT YÊU THÍCH 
-if (isLoggedIn() && isset($_POST['bookmark_post'])) {
-    $user_id = $_SESSION['user_id'];
-    // Kiểm tra đã bookmark chưa
-    $checkBookmark = mysqli_query($conn, "SELECT * FROM bookmarks WHERE user_id = $user_id AND post_id = $post_id");
-    if (mysqli_num_rows($checkBookmark) == 0) {
-        // Nếu chưa bookmark thì thêm mới
-        mysqli_query($conn, "INSERT INTO bookmarks (user_id, post_id, created_at) VALUES ($user_id, $post_id, NOW())");
-    }
-    // Sau khi bookmark xong, reload lại trang để cập nhật giao diện
-    header("Location: post.php?id=$post_id");
-    exit();
-}
-
-// GHI NHẬN LỊCH SỬ ĐỌC BÀI VIẾT 
-if (isLoggedIn()) {
-    $user_id = $_SESSION['user_id'];
-    // Ghi nhận lịch sử đọc, nếu đã có thì cập nhật thời gian, nếu chưa có thì thêm mới
-    $checkHistory = mysqli_query($conn, "SELECT * FROM read_history WHERE user_id = $user_id AND post_id = $post_id");
-    if (mysqli_num_rows($checkHistory) > 0) { 
-        mysqli_query($conn, "UPDATE read_history SET last_read_at = NOW() WHERE user_id = $user_id AND post_id = $post_id");
-    } else {
-        mysqli_query($conn, "INSERT INTO read_history (user_id, post_id, last_read_at) VALUES ($user_id, $post_id, NOW())");
-    }
-}
-
-// Đánh dấu thông báo là đã xem khi người dùng truy cập vào bài viết từ thông báo
-if (isset($_GET['notification_id']) && isLoggedIn()) {
-    $notificationId = intval($_GET['notification_id']);
-    $userId = $_SESSION['user_id'];
-
-    $sql = "UPDATE notifications SET seen = 1 WHERE id = ? AND receiver_id = ?";
-    if ($stmt = mysqli_prepare($conn, $sql)) {
-        mysqli_stmt_bind_param($stmt, 'ii', $notificationId, $userId);
-        mysqli_stmt_execute($stmt);
-        mysqli_stmt_close($stmt);
-    }
-}
-
-?>
+<?php include __DIR__ . '/../../controllers/Post2Controller.php'; ?>
 
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($post['title']); ?> - Blog Chia Sẻ</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="<?=$baseUrl?>/global.css">
+    <link rel="stylesheet" href="<?= $baseUrl ?>/src/styles/global.css">
 </head>
+
 <body>
-<?php include 'navbar.php'; ?>
+    <?php include __DIR__ . '/../../layout/navbar.php'; ?>
 
     <div class="container mt-4">
         <?php if ($error): ?>
             <div class="alert alert-danger"><?php echo $error; ?></div>
         <?php endif; ?>
-        
+
         <?php if ($success): ?>
             <div class="alert alert-success"><?php echo $success; ?></div>
         <?php endif; ?>
@@ -368,19 +41,20 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
                         if (!empty($post['first_name']) && !empty($post['last_name'])) {
                             $authorDisplayName = htmlspecialchars($post['first_name']) . ' ' . htmlspecialchars($post['last_name']);
                         } else if (!empty($post['first_name'])) {
-                             $authorDisplayName = htmlspecialchars($post['first_name']);
+                            $authorDisplayName = htmlspecialchars($post['first_name']);
                         } else if (!empty($post['last_name'])) {
-                             $authorDisplayName = htmlspecialchars($post['last_name']);
+                            $authorDisplayName = htmlspecialchars($post['last_name']);
                         }
-                        $authorAvatarPath = $baseUrl . '/dist/avatars/' . htmlspecialchars($post['avatar'] ?? 'default_avatar.png');
+                        $authorAvatarPath = $baseUrl . '/src/assets/dist/avatars/' . htmlspecialchars($post['avatar'] ?? 'default_avatar.png');
                         ?>
-                        Bởi <img src="<?=$authorAvatarPath?>" alt="Avatar" class="rounded-circle me-1" style="width: 20px; height: 20px; object-fit: cover;">
-                        <?=$authorDisplayName?>
+                        Bởi <img src="<?= $authorAvatarPath ?>" alt="Avatar" class="rounded-circle me-1"
+                            style="width: 20px; height: 20px; object-fit: cover;">
+                        <?= $authorDisplayName ?>
                     </small>
                     <small class="text-muted"><?php echo date('d/m/Y', strtotime($post['created_at'])); ?></small>
                 </div>
                 <div class="card-text"><?php echo $post['content']; ?></div>
-                
+
                 <?php if (isLoggedIn()): ?>
                     <div class="d-flex gap-2 mt-3">
                         <form method="POST" action="" class="d-inline">
@@ -409,8 +83,11 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
                         ?>
                         <form method="POST" action="" class="d-inline">
                             <input type="hidden" name="bookmark_post" value="1">
-                            <button type="submit" class="btn btn-outline-success" <?php if ($isBookmarked) echo 'disabled'; ?>>
-                                <i class="bi bi-bookmark<?php if ($isBookmarked) echo '-fill'; ?>"></i> <?php echo $isBookmarked ? 'Đã lưu' : 'Lưu bài viết'; ?>
+                            <button type="submit" class="btn btn-outline-success" <?php if ($isBookmarked)
+                                echo 'disabled'; ?>>
+                                <i class="bi bi-bookmark<?php if ($isBookmarked)
+                                    echo '-fill'; ?>"></i>
+                                <?php echo $isBookmarked ? 'Đã lưu' : 'Lưu bài viết'; ?>
                             </button>
                         </form>
                     </div>
@@ -426,7 +103,8 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
                 <?php if (isLoggedIn()): ?>
                     <form method="POST" action="" class="mb-4">
                         <div class="mb-3">
-                            <textarea class="form-control" name="comment" rows="3" required placeholder="Viết bình luận..."></textarea>
+                            <textarea class="form-control" name="comment" rows="3" required
+                                placeholder="Viết bình luận..."></textarea>
                         </div>
                         <button type="submit" class="btn btn-primary">Gửi bình luận</button>
                     </form>
@@ -448,38 +126,46 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
                                         if (!empty($comment['first_name']) && !empty($comment['last_name'])) {
                                             $commentAuthorDisplayName = htmlspecialchars($comment['first_name']) . ' ' . htmlspecialchars($comment['last_name']);
                                         } else if (!empty($comment['first_name'])) {
-                                             $commentAuthorDisplayName = htmlspecialchars($comment['first_name']);
+                                            $commentAuthorDisplayName = htmlspecialchars($comment['first_name']);
                                         } else if (!empty($comment['last_name'])) {
-                                             $commentAuthorDisplayName = htmlspecialchars($comment['last_name']);
+                                            $commentAuthorDisplayName = htmlspecialchars($comment['last_name']);
                                         }
-                                        $commentAvatarPath = $baseUrl . '/dist/avatars/' . htmlspecialchars($comment['avatar'] ?? 'default_avatar.png');
+                                        $commentAvatarPath = $baseUrl . '/src/assets/dist/avatars/' . htmlspecialchars($comment['avatar'] ?? 'default_avatar.png');
                                         ?>
-                                        <img src="<?=$commentAvatarPath?>" alt="Avatar" class="rounded-circle me-1" style="width: 20px; height: 20px; object-fit: cover;">
-                                        <?=$commentAuthorDisplayName?><?php if (isset($comment['role']) && $comment['role'] === 'admin'): ?><span class="badge bg-danger ms-1">Admin</span><?php endif; ?>
+                                        <img src="<?= $commentAvatarPath ?>" alt="Avatar" class="rounded-circle me-1"
+                                            style="width: 20px; height: 20px; object-fit: cover;">
+                                        <?= $commentAuthorDisplayName ?>
+                                        <?php if (isset($comment['role']) && $comment['role'] === 'admin'): ?><span
+                                                class="badge bg-danger ms-1">Admin</span><?php endif; ?>
                                     </h6>
-                                    <small class="text-muted"><?php echo date('d/m/Y H:i', strtotime($comment['created_at'])); ?></small>
+                                    <small
+                                        class="text-muted"><?php echo date('d/m/Y H:i', strtotime($comment['created_at'])); ?></small>
                                 </div>
                                 <p class="card-text"><?php echo nl2br(htmlspecialchars($comment['content'])); ?></p>
                                 <?php if (isLoggedIn() && ($_SESSION['user_id'] == $comment['user_id'] || isAdmin())): ?>
                                     <div class="btn-group mb-2">
-                                        <button class="btn btn-sm btn-outline-primary" onclick="editComment(<?php echo $comment['id']; ?>, '<?php echo addslashes($comment['content']); ?>')"><i class="bi bi-pencil"></i></button>
-                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteComment(<?php echo $comment['id']; ?>)"><i class="bi bi-trash"></i></button>
+                                        <button class="btn btn-sm btn-outline-primary"
+                                            onclick="editComment(<?php echo $comment['id']; ?>, '<?php echo addslashes($comment['content']); ?>')"><i
+                                                class="bi bi-pencil"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger"
+                                            onclick="deleteComment(<?php echo $comment['id']; ?>)"><i
+                                                class="bi bi-trash"></i></button>
                                     </div>
                                 <?php endif; ?>
 
                                 <!-- Replies Section -->
                                 <div id="replies-<?php echo $comment['id']; ?>" class="mt-3 ms-4">
-                                    <?php 
+                                    <?php
                                     $reply_limit = 5;
                                     // Gọi hàm getReplies để lấy danh sách trả lời cho bình luận hiện tại (theo id)
                                     $replies = getReplies($comment['id'], $reply_limit);
                                     // Lấy tổng số trả lời cho bình luận này (đã truy vấn sẵn ở reply_count)
-                                    $reply_count = (int)$comment['reply_count'];
+                                    $reply_count = (int) $comment['reply_count'];
                                     $shown_replies = 0;
                                     // Duyệt qua từng trả lời và hiển thị ra giao diện
                                     while ($reply = mysqli_fetch_assoc($replies)):
                                         $shown_replies++;
-                                    ?>
+                                        ?>
                                         <div class="card mb-2">
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -490,32 +176,44 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
                                                         if (!empty($reply['first_name']) && !empty($reply['last_name'])) {
                                                             $replyAuthorDisplayName = htmlspecialchars($reply['first_name']) . ' ' . htmlspecialchars($reply['last_name']);
                                                         } else if (!empty($reply['first_name'])) {
-                                                             $replyAuthorDisplayName = htmlspecialchars($reply['first_name']);
+                                                            $replyAuthorDisplayName = htmlspecialchars($reply['first_name']);
                                                         } else if (!empty($reply['last_name'])) {
-                                                             $replyAuthorDisplayName = htmlspecialchars($reply['last_name']);
+                                                            $replyAuthorDisplayName = htmlspecialchars($reply['last_name']);
                                                         }
                                                         // Lấy đường dẫn avatar của người trả lời (nếu không có thì dùng avatar mặc định)
                                                         $replyAvatarPath = $baseUrl . '/dist/avatars/' . htmlspecialchars($reply['avatar'] ?? 'default_avatar.png');
                                                         ?>
-                                                        <img src="<?=$replyAvatarPath?>" alt="Avatar" class="rounded-circle me-1" style="width: 20px; height: 20px; object-fit: cover;">
-                                                        <?=$replyAuthorDisplayName?><?php if (isset($reply['role']) && $reply['role'] === 'admin'): ?><span class="badge bg-danger ms-1">Admin</span><?php endif; ?>
+                                                        <img src="<?= $replyAvatarPath ?>" alt="Avatar"
+                                                            class="rounded-circle me-1"
+                                                            style="width: 20px; height: 20px; object-fit: cover;">
+                                                        <?= $replyAuthorDisplayName ?>
+                                                        <?php if (isset($reply['role']) && $reply['role'] === 'admin'): ?><span
+                                                                class="badge bg-danger ms-1">Admin</span><?php endif; ?>
                                                     </h6>
-                                                    <small class="text-muted"><?php echo date('d/m/Y H:i', strtotime($reply['created_at'])); ?></small>
+                                                    <small
+                                                        class="text-muted"><?php echo date('d/m/Y H:i', strtotime($reply['created_at'])); ?></small>
                                                 </div>
-                                                <p class="card-text"><?php echo nl2br(htmlspecialchars($reply['content'])); ?></p>
-                                                <?php 
+                                                <p class="card-text"><?php echo nl2br(htmlspecialchars($reply['content'])); ?>
+                                                </p>
+                                                <?php
                                                 // Nếu là chủ trả lời hoặc admin thì hiển thị nút sửa/xóa
                                                 if (isLoggedIn() && ($_SESSION['user_id'] == $reply['user_id'] || isAdmin())): ?>
                                                     <div class="btn-group">
-                                                        <button class="btn btn-sm btn-outline-primary" onclick="editComment(<?php echo $reply['id']; ?>, '<?php echo addslashes($reply['content']); ?>')"><i class="bi bi-pencil"></i></button>
-                                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteComment(<?php echo $reply['id']; ?>)"><i class="bi bi-trash"></i></button>
+                                                        <button class="btn btn-sm btn-outline-primary"
+                                                            onclick="editComment(<?php echo $reply['id']; ?>, '<?php echo addslashes($reply['content']); ?>')"><i
+                                                                class="bi bi-pencil"></i></button>
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                            onclick="deleteComment(<?php echo $reply['id']; ?>)"><i
+                                                                class="bi bi-trash"></i></button>
                                                     </div>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
                                     <?php endwhile; ?>
                                     <?php if ($reply_count > $reply_limit): ?>
-                                        <button class="btn btn-link p-0" onclick="showAllReplies(<?php echo $comment['id']; ?>, <?php echo $reply_limit; ?>)">Xem thêm...</button>
+                                        <button class="btn btn-link p-0"
+                                            onclick="showAllReplies(<?php echo $comment['id']; ?>, <?php echo $reply_limit; ?>)">Xem
+                                            thêm...</button>
                                     <?php endif; ?>
                                 </div>
 
@@ -524,18 +222,21 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
                                     <form method="POST" action="">
                                         <input type="hidden" name="parent_id" value="<?php echo $comment['id']; ?>">
                                         <div class="mb-3">
-                                            <textarea class="form-control" name="comment" rows="2" required placeholder="Viết trả lời..."></textarea>
+                                            <textarea class="form-control" name="comment" rows="2" required
+                                                placeholder="Viết trả lời..."></textarea>
                                         </div>
                                         <div class="btn-group">
                                             <button type="submit" class="btn btn-primary btn-sm">Gửi trả lời</button>
-                                            <button type="button" class="btn btn-secondary btn-sm" onclick="hideReplyForm(<?php echo $comment['id']; ?>)">Hủy</button>
+                                            <button type="button" class="btn btn-secondary btn-sm"
+                                                onclick="hideReplyForm(<?php echo $comment['id']; ?>)">Hủy</button>
                                         </div>
                                     </form>
                                 </div>
 
                                 <!-- Reply Button (luôn ở cuối cùng) -->
                                 <?php if (isLoggedIn()): ?>
-                                    <button class="btn btn-sm btn-outline-secondary mt-2" onclick="showReplyForm(<?php echo $comment['id']; ?>)">Trả lời</button>
+                                    <button class="btn btn-sm btn-outline-secondary mt-2"
+                                        onclick="showReplyForm(<?php echo $comment['id']; ?>)">Trả lời</button>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -546,9 +247,10 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <!-- Edit Comment Modal -->
-    <div class="modal fade" id="editCommentModal" tabindex="-1" aria-labelledby="editCommentModalLabel" aria-hidden="true">
+    <div class="modal fade" id="editCommentModal" tabindex="-1" aria-labelledby="editCommentModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -561,7 +263,8 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
                         <input type="hidden" name="update_comment" value="1">
                         <div class="mb-3">
                             <label for="new_content" class="form-label">Nội dung</label>
-                            <textarea class="form-control" id="new_content" name="new_content" rows="3" required></textarea>
+                            <textarea class="form-control" id="new_content" name="new_content" rows="3"
+                                required></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -591,16 +294,19 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
                         <input type="hidden" name="update_post" value="1">
                         <div class="mb-3">
                             <label for="new_title" class="form-label">Tiêu đề</label>
-                            <input type="text" class="form-control" id="new_title" name="new_title" value="<?php echo htmlspecialchars($post['title']); ?>" required>
+                            <input type="text" class="form-control" id="new_title" name="new_title"
+                                value="<?php echo htmlspecialchars($post['title']); ?>" required>
                         </div>
-                        
-                         <!-- Topic Selection Dropdown -->
+
+                        <!-- Topic Selection Dropdown -->
                         <div class="mb-3">
                             <label for="edit_topic" class="form-label">Chủ đề</label>
                             <select class="form-select" id="edit_topic" name="topic_id">
                                 <option value="">-- Chọn chủ đề --</option>
                                 <?php foreach ($topics as $topic): ?>
-                                    <option value="<?php echo $topic['id']; ?>"><?php echo htmlspecialchars($topic['name']); ?></option>
+                                    <option value="<?php echo $topic['id']; ?>">
+                                        <?php echo htmlspecialchars($topic['name']); ?>
+                                    </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -629,7 +335,7 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
     <script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
     <script>
         // Khởi tạo trình soạn thảo QuillJS cho phần chỉnh sửa bài viết
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             quillEditPost = new Quill('#quill-edit-post', {
                 theme: 'snow',
                 modules: {
@@ -654,7 +360,7 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
                 }
             });
             // Xử lý sự kiện dán ảnh từ clipboard vào editor
-            quillEditPost.root.addEventListener('paste', function(e) {
+            quillEditPost.root.addEventListener('paste', function (e) {
                 var clipboardData = e.clipboardData || window.clipboardData;
                 if (clipboardData && clipboardData.items) {
                     for (var i = 0; i < clipboardData.items.length; i++) {
@@ -662,7 +368,7 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
                         if (item.type.indexOf('image') !== -1) {
                             e.preventDefault();
                             var file = item.getAsFile();
-                            uploadImageToServerEditPost(file, function(url) {
+                            uploadImageToServerEditPost(file, function (url) {
                                 var range = quillEditPost.getSelection();
                                 quillEditPost.insertEmbed(range.index, 'image', url);
                             });
@@ -671,12 +377,12 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
                 }
             });
             // Xử lý sự kiện kéo-thả ảnh vào editor
-            quillEditPost.root.addEventListener('drop', function(e) {
+            quillEditPost.root.addEventListener('drop', function (e) {
                 if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
                     e.preventDefault();
                     var file = e.dataTransfer.files[0];
                     if (file && file.type.indexOf('image') !== -1) {
-                        uploadImageToServerEditPost(file, function(url) {
+                        uploadImageToServerEditPost(file, function (url) {
                             var range = quillEditPost.getSelection();
                             quillEditPost.insertEmbed(range.index, 'image', url);
                         });
@@ -689,11 +395,11 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
             var input = document.createElement('input');
             input.setAttribute('type', 'file');
             input.setAttribute('accept', 'image/*');
-            input.click(); 
-            input.onchange = function() { 
-                var file = input.files[0]; 
-                if (file) { 
-                    uploadImageToServerEditPost(file, function(url) {
+            input.click();
+            input.onchange = function () {
+                var file = input.files[0];
+                if (file) {
+                    uploadImageToServerEditPost(file, function (url) {
                         var range = quillEditPost.getSelection();
                         quillEditPost.insertEmbed(range.index, 'image', url);
                     });
@@ -706,7 +412,7 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
             formData.append('image', file);
             var xhr = new XMLHttpRequest();
             xhr.open('POST', 'upload_image.php', true);
-            xhr.onload = function() {
+            xhr.onload = function () {
                 if (xhr.status === 200) {
                     var res = JSON.parse(xhr.responseText);
                     if (res.url) {
@@ -737,7 +443,7 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
         function showEditPostModal() {
             var modal = new bootstrap.Modal(document.getElementById('editPostModal'));
             modal.show();
-            setTimeout(function() {
+            setTimeout(function () {
                 quillEditPost.root.innerHTML = <?php echo json_encode($post['content']); ?>;
                 var currentTopicId = <?php echo json_encode($post['topic_id']); ?>;
                 if (currentTopicId) {
@@ -803,5 +509,6 @@ if (isset($_GET['notification_id']) && isLoggedIn()) {
         }
     </script>
 </body>
+
 </html>
-<?php include 'footer.php'; ?>
+<?php include __DIR__ . '/../../layout/footer.php'; ?>

@@ -1,28 +1,14 @@
 <?php
-class PostController
-{
-    private $postModel;
+require_once __DIR__ . '/../models/PostModel.php';
 
-    public function __construct($conn)
-    {
-        $this->postModel = new PostModel($conn);
-    }
+$page = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
+$search_term = trim($_GET['search'] ?? '');
+$topic_id = isset($_GET['topic_id']) ? (int) $_GET['topic_id'] : null;
 
-    public function index()
-    {
-        $page = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
-        $limit = 6;
-        $offset = ($page - 1) * $limit;
+$model = new PostModel($conn);
 
-        $search = trim($_GET['search'] ?? '');
-        $topic_id = isset($_GET['topic_id']) ? (int) $_GET['topic_id'] : null;
+$total_posts = $model->countPosts($search_term, $topic_id);
+$total_pages = $model->getTotalPages($total_posts);
+$result = $model->getPosts($page, $search_term, $topic_id);
 
-        $total_posts = $this->postModel->countPosts($search, $topic_id);
-        $total_pages = ceil($total_posts / $limit);
-
-        $posts = $this->postModel->getPosts($search, $topic_id, $limit, $offset);
-
-        require __DIR__ . '/../views/posts/index.php';
-    }
-}
 ?>

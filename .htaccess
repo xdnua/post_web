@@ -1,3 +1,0 @@
-ErrorDocument 404 /posts/404.php
-ErrorDocument 403 /posts/403.php
-ErrorDocument 500 /posts/500.php 

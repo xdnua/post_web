@@ -1,50 +1,4 @@
-<?php
-require_once __DIR__ . '/../../../config/database.php'; // Kết nối CSDL
-require_once __DIR__ . '/../../../auth/auth.php'; // Kiểm tra đăng nhập, xác thực người dùng
-
-// Lấy dữ liệu từ URL
-$page = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
-$limit = 6;
-$offset = ($page - 1) * $limit;
-$search_term = trim($_GET['search'] ?? '');
-$topic_id = isset($_GET['topic_id']) ? (int) $_GET['topic_id'] : null;
-
-// Chuẩn bị điều kiện truy vấn
-$conditions = '';
-$param_values = [];
-$param_types = '';
-
-if (!empty($search_term)) {
-    $escaped_search_term = mysqli_real_escape_string($conn, $search_term);
-    $conditions = " WHERE (p.title LIKE '%$escaped_search_term%' OR p.content LIKE '%$escaped_search_term%' OR t.name LIKE '%$escaped_search_term%')";
-}
-
-// Count total posts (with search)
-$count_query = "SELECT COUNT(*) as total FROM posts p LEFT JOIN topics t ON p.topic_id = t.id" . $conditions;
-$count_result = mysqli_query($conn, $count_query);
-$total_posts = mysqli_fetch_assoc($count_result)['total'];
-$total_pages = ceil($total_posts / $limit);
-
-// Get posts for current page with user information (with search)
-$query = "SELECT p.*, u.username, t.name as topic_name,
-          (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'like') as like_count,
-          (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND type = 'dislike') as dislike_count,
-          (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count
-          FROM posts p 
-          JOIN users u ON p.user_id = u.id 
-          LEFT JOIN topics t ON p.topic_id = t.id";
-
-if (!empty($conditions)) {
-    $query .= $conditions;
-} else {
-    $query .= ' WHERE 1=1';
-}
-
-$query .= " ORDER BY p.created_at DESC LIMIT $limit OFFSET $offset";
-
-$result = mysqli_query($conn, $query);
-$baseUrl = '/posts';
-?>
+<?php include __DIR__ . '/../../controllers/PostController.php'; ?>
 
 <!DOCTYPE html>
 <html lang="vi">
@@ -55,12 +9,11 @@ $baseUrl = '/posts';
     <title>Blog Chia Sẻ</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="<?= $baseUrl ?>/global.css">
-
+    <link rel="stylesheet" href="<?= $baseUrl ?>/src/styles/global.css">
 </head>
 
 <body style="padding-top: 60px;">
-    <?php include __DIR__ . '/../../../navbar.php'; ?>
+    <?php include __DIR__ . '/../../layout/navbar.php'; ?>
 
     <!-- Hero Section - Discover, Learn, Enjoy -->
     <section class="hero-design-section py-5">
@@ -105,7 +58,7 @@ $baseUrl = '/posts';
                 <!-- Web Design Card -->
                 <div class="  col-md-4">
                     <div class="card card-hover h-100 featured-card shadow-sm"
-                        style="background-image: url('<?= $baseUrl ?>/dist/imgs/blog2.png'); background-size: cover; background-position: center; color: white;">
+                        style="background-image: url('<?= $baseUrl ?>/src/assets/dist/imgs/blog2.png'); background-size: cover; background-position: center; color: white;">
                         <div class="card-body">
                             <div class=" card-body d-flex flex-column">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -121,7 +74,7 @@ $baseUrl = '/posts';
                 <!-- Gioi thieu-->
                 <div class=" col-md-8">
                     <div class=" card card-hover h-100 featured-card shadow-sm"
-                        style="background-image: url('<?= $baseUrl ?>/dist/imgs/blog.png'); background-size: cover; background-position: center; color: white;">
+                        style="background-image: url('<?= $baseUrl ?>/src/assets/dist/imgs/blog.png'); background-size: cover; background-position: center; color: white;">
                         <div class="card-body">
                             <div class="  card-body d-flex flex-column">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -207,7 +160,7 @@ Trả về mặc định: không thêm margin, không gap, không padding hai b�
                                                         $authorDisplayName = htmlspecialchars($post['last_name']);
                                                     }
                                                     // Lấy đường dẫn avatar, nếu không có thì dùng avatar mặc định
-                                                    $authorAvatarPath = $baseUrl . '/dist/avatars/' . htmlspecialchars($post['avatar'] ?? 'default_avatar.png');
+                                                    $authorAvatarPath = $baseUrl . '/src/assets/dist/avatars/' . htmlspecialchars($post['avatar'] ?? 'default_avatar.png');
                                                     ?>
                                                     Bởi <img src="<?= $authorAvatarPath ?>" alt="Avatar"
                                                         class="rounded-circle me-1"
@@ -226,7 +179,7 @@ Trả về mặc định: không thêm margin, không gap, không padding hai b�
                                                     <span><i class="bi bi-hand-thumbs-down"></i>
                                                         <?php echo $post['dislike_count']; ?></span>
                                                 </div>
-                                                <a href="post.php?id=<?php echo $post['id']; ?>"
+                                                <a href="/posts/src/views/post/post.php?id=<?php echo $post['id']; ?>"
                                                     class="btn btn-primary btn-sm">Đọc tiếp</a>
                                             </div>
                                         </div>
@@ -289,7 +242,7 @@ Trả về mặc định: không thêm margin, không gap, không padding hai b�
 
     <!-- How it works Section -->
     <section class="how-it-works-section py-5 bg-light"
-        style="background-image: url('<?= $baseUrl ?>/dist/imgs/how-it-works.png'); background-size: cover; background-position: center; color: white;">
+        style="background-image: url('<?= $baseUrl ?>/src/assets/dist/imgs/how-it-works.png'); background-size: cover; background-position: center; color: white;">
         <div class="container">
             <h2 class="text-center mb-5 text-light">Hoạt động như thế nào?</h2>
             <div class="row">
@@ -400,8 +353,8 @@ Trả về mặc định: không thêm margin, không gap, không padding hai b�
                 </div>
                 <div class="col-md-6 text-center">
                     <!-- Placeholder Image -->
-                    <img src="<?= $baseUrl ?>/dist/imgs/image.png" alt="Minh họa Câu hỏi thường gặp" class="img-fluid"
-                        style="height: 400px; border-radius: 10px;">
+                    <img src="<?= $baseUrl ?>/src/assets/dist/imgs/image.png" alt="Minh họa Câu hỏi thường gặp"
+                        class="img-fluid" style="height: 400px; border-radius: 10px;">
                 </div>
             </div>
         </div>
@@ -423,4 +376,4 @@ Trả về mặc định: không thêm margin, không gap, không padding hai b�
 </body>
 
 </html>
-<?php include __DIR__ . '/../../../footer.php'; ?>
+<?php include __DIR__ . '/../../layout/footer.php'; ?>
