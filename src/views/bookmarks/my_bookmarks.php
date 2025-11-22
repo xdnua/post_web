@@ -42,7 +42,8 @@
                                     <span><i class="bi bi-hand-thumbs-down"></i> <?= $post['dislike_count'] ?></span>
                                 </div>
                                 <div class="d-flex gap-2">
-                                    <a href="post.php?id=<?= $post['id'] ?>" class="btn btn-primary btn-sm">Đọc tiếp</a>
+                                    <a href="/posts/src/views/post/post.php?id=<?= $post['id'] ?>"
+                                        class="btn btn-primary btn-sm">Đọc tiếp</a>
                                     <form method="POST"
                                         onsubmit="return confirm('Bạn có chắc chắn muốn hủy lưu bài viết này?');"
                                         style="display:inline;">
